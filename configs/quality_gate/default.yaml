@@ -1,0 +1,6 @@
+enabled: true
+snr_threshold: 0.0
+spectral_flatness_threshold: 0.0
+weighting_strategy: "soft" # soft | hard
+alpha: 0.5   # SNR sigmoid scale
+beta: 10.0   # Spectral flatness sigmoid scale

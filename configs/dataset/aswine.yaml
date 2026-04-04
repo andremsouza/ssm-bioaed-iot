@@ -1,0 +1,13 @@
+name: aswine
+root_dir: ${oc.env:DATA_DIR,data}/aswine
+meta_variant: 1s_pruned # raw | 1s | 1s_pruned
+sample_rate: 16000
+segment_duration: 1.0
+n_mels: 64
+hop_length: 160 # 10ms @ 16kHz
+win_length: 400 # 25ms @ 16kHz
+num_classes: 7
+batch_size: 64
+num_workers: 4
+pin_memory: true
+normalize: true

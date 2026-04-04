@@ -1,0 +1,30 @@
+# @package _global_
+#
+# Full ablation matrix for DCQG evaluation.
+# Usage:
+#   python -m bioaed.ablation --multirun \
+#       model=inceptiontime,ast,audio_mamba \
+#       dataset=aswine,anuraset \
+#       quality_gate.enabled=true,false \
+#       seed=0,1,2,3,4,5,6,7,8,9
+#
+# Total runs: 3 models × 2 datasets × 2 DCQG states × 10 seeds = 120
+
+defaults:
+  - override /dataset: aswine
+  - override /model: inceptiontime
+  - override /training: default
+  - override /quality_gate: default
+  - override /augmentation: default
+
+seed: 42
+experiment_name: "ablation"
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model: inceptiontime,ast,audio_mamba
+      dataset: aswine,anuraset
+      quality_gate.enabled: "true,false"
+      seed: "0,1,2,3,4,5,6,7,8,9"

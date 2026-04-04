@@ -1,0 +1,7 @@
+_target_: bioaed.models.audio_mamba.AudioMamba
+num_classes: ${dataset.num_classes}
+d_model: 192
+n_layers: 4
+d_state: 16
+bidirectional: true
+patch_size: 16

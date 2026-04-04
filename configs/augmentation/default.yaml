@@ -1,0 +1,5 @@
+enabled: true
+freq_mask_param: 8
+time_mask_param: 20
+n_freq_masks: 2
+n_time_masks: 2

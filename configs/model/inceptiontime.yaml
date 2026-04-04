@@ -1,0 +1,6 @@
+_target_: bioaed.models.inceptiontime.InceptionTime
+num_classes: ${dataset.num_classes}
+in_channels: ${dataset.n_mels}
+depth: 2
+n_filters: 64
+kernel_sizes: [10, 20, 40]

@@ -1,0 +1,12 @@
+name: anuraset
+root_dir: ${oc.env:DATA_DIR,data}/anuraset
+sample_rate: 22050
+segment_duration: 3.0
+n_mels: 64
+hop_length: 220 # ~10ms @ 22050Hz
+win_length: 550 # ~25ms @ 22050Hz
+num_classes: 42
+batch_size: 32
+num_workers: 4
+pin_memory: true
+normalize: true
