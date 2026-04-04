@@ -76,6 +76,10 @@ def _train_and_evaluate(
         state = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         model.load_state_dict(state["model_state_dict"])
 
+    # Move model (and eval batches) to the same device Fabric used for training
+    device = fabric.device
+    model = model.to(device)
+
     # Evaluate on test set
     model.eval()
     all_logits, all_labels = [], []
@@ -83,6 +87,8 @@ def _train_and_evaluate(
 
     with torch.no_grad():
         for spectrogram, labels, _weights in test_loader:
+            spectrogram = spectrogram.to(device)
+            labels = labels.to(device)
             all_logits.append(model(spectrogram))
             all_labels.append(labels)
 
