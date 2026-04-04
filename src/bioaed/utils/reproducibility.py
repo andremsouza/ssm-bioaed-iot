@@ -7,6 +7,7 @@ import random
 
 import numpy as np
 import torch
+import torch.multiprocessing as tmp
 from loguru import logger
 
 
@@ -23,6 +24,14 @@ def seed_everything(seed: int = 42) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)  # noqa: NPY002
     torch.manual_seed(seed)
+
+    # Use filesystem-based shared memory for DataLoader workers.
+    # The default 'file_descriptor' strategy places shared memory handles in
+    # Python's multiprocessing temp dir (/tmp/pymp-*).  On Python 3.13 the
+    # temp-dir cleanup finalizer runs before all worker file descriptors are
+    # released, causing OSError: [Errno 39] Directory not empty at process exit.
+    # 'file_system' uses /dev/shm instead and avoids this race entirely.
+    tmp.set_sharing_strategy("file_system")
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
