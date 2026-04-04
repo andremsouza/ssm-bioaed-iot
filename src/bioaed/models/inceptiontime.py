@@ -27,15 +27,20 @@ class InceptionModule(nn.Module):
     ) -> None:
         super().__init__()
         if kernel_sizes is None:
-            kernel_sizes = [10, 20, 40]
+            kernel_sizes = [9, 19, 39]
 
+        # Use explicit symmetric padding (ks // 2) instead of padding='same'.
+        # padding='same' on even kernel sizes with integer dilation forces
+        # asymmetric padding → PyTorch must allocate a zero-padded copy of
+        # the input.  Odd kernel sizes (e.g. 9, 19, 39) have integer symmetric
+        # padding and avoid this entirely.
         self.branches = nn.ModuleList(
             [
                 nn.Conv1d(
                     in_channels,
                     n_filters,
                     kernel_size=ks,
-                    padding="same",
+                    padding=ks // 2,
                     bias=False,
                 )
                 for ks in kernel_sizes
@@ -63,13 +68,12 @@ class InceptionModule(nn.Module):
         """
         branch_outputs = [branch(x) for branch in self.branches]
         mp_out = self.maxpool(x)
-
-        # Align temporal dimensions (MaxPool may differ by ±1)
-        target_len = branch_outputs[0].shape[-1]
-        if mp_out.shape[-1] != target_len:
-            mp_out = mp_out[:, :, :target_len]
-
         branch_outputs.append(mp_out)
+        # Align temporal dimension: trim all branches to the shortest length.
+        # With odd kernel sizes and matching padding the lengths are always equal,
+        # but guard against edge cases (e.g. very short inputs).
+        min_len = min(b.shape[-1] for b in branch_outputs)
+        branch_outputs = [b[:, :, :min_len] for b in branch_outputs]
         out = torch.cat(branch_outputs, dim=1)
         return self.relu(self.bn(out))
 

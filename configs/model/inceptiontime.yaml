@@ -3,4 +3,7 @@ num_classes: ${dataset.num_classes}
 in_channels: ${dataset.n_mels}
 depth: 2
 n_filters: 64
-kernel_sizes: [10, 20, 40]
+# Odd kernel sizes give exact symmetric padding (padding = k//2),
+# avoiding the asymmetric-copy overhead of even kernels with padding='same'.
+# [9, 19, 39] are the nearest odd equivalents to the original [10, 20, 40].
+kernel_sizes: [9, 19, 39]

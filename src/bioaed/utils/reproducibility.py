@@ -27,6 +27,10 @@ def seed_everything(seed: int = 42) -> None:
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+        # Allow Tensor Cores on Ampere/Ada/Blackwell GPUs (TF32 matmul).
+        # 'high' keeps full BF16 accumulation while using TF32 for the inner
+        # product — negligible accuracy impact, significant throughput gain.
+        torch.set_float32_matmul_precision("high")
 
     # Deterministic algorithms (may reduce performance slightly)
     torch.backends.cudnn.deterministic = True
