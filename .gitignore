@@ -49,7 +49,7 @@ mlruns/
 Thumbs.db
 
 # === Data ===
-data/
+/data/
 
 # === reports ===
-reports/
+/reports/
