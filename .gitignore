@@ -1,0 +1,55 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# === Virtual environments ===
+.venv/
+venv/
+env/
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Testing & Linting ===
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# === Hydra outputs ===
+outputs/
+multirun/
+
+# === Experiment tracking ===
+wandb/
+mlruns/
+
+# === Data formats ===
+*.beton
+
+# === Project-specific ===
+.dump/
+.agent/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Data ===
+data/
+
+# === reports ===
+reports/

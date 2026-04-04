@@ -1,0 +1,73 @@
+.PHONY: install install-cuda install-cuda-full lint format typecheck test train evaluate sweep ablation quick-pilot analyze figures clean
+
+# === Environment ===
+install:
+	uv sync
+
+install-cuda:
+	uv sync --extra cuda
+
+# Full CUDA install including mamba-ssm/causal-conv1d.
+# Requires system CUDA toolkit matching the PyTorch CUDA version.
+# Falls back to PyTorch-native ops if prebuilt wheels are unavailable.
+install-cuda-full:
+	CAUSAL_CONV1D_SKIP_CUDA_BUILD=TRUE MAMBA_SKIP_CUDA_BUILD=TRUE \
+		uv sync --extra cuda-mamba
+
+install-dev:
+	uv sync --extra dev
+
+install-all:
+	CAUSAL_CONV1D_SKIP_CUDA_BUILD=TRUE MAMBA_SKIP_CUDA_BUILD=TRUE \
+		uv sync --extra cuda-mamba --extra dev
+
+# === Code Quality ===
+lint:
+	uv run ruff check src/ tests/
+
+format:
+	uv run ruff format src/ tests/
+
+typecheck:
+	uv run mypy src/
+
+# === Testing ===
+test:
+	uv run pytest -v
+
+test-cov:
+	uv run pytest --cov=bioaed --cov-report=html
+
+# === Training & Evaluation ===
+train:
+	uv run python -m bioaed.train
+
+evaluate:
+	uv run python -m bioaed.evaluate
+
+sweep:
+	uv run python -m bioaed.sweep
+
+# === Ablation & Analysis ===
+quick-pilot:
+	bash scripts/quick_experiment.sh
+
+ablation:
+	uv run python -m bioaed.ablation --multirun \
+		model=inceptiontime,ast,audio_mamba \
+		dataset=aswine,anuraset \
+		quality_gate.enabled=true,false \
+		seed=0,1,2,3,4,5,6,7,8,9
+
+analyze:
+	uv run python -m bioaed.evaluation.report_generator
+
+figures:
+	uv run python -m bioaed.evaluation.report_generator
+
+# === Cleanup ===
+clean:
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov
+	rm -rf outputs/ multirun/
