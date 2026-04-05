@@ -47,9 +47,23 @@ class BioacousticDataModule:
         self.quality_gate: QualityGate | None = None
 
         if cfg.quality_gate.enabled:
+            # Dataset-specific thresholds (in dataset config) take priority over
+            # the global quality_gate config, since thresholds must be calibrated
+            # per-dataset (SNR and flatness distributions differ across corpora).
+            dataset_qg = getattr(cfg.dataset, "quality_gate", None)
+            snr_thresh = (
+                dataset_qg.snr_threshold
+                if dataset_qg is not None
+                else cfg.quality_gate.snr_threshold
+            )
+            flat_thresh = (
+                dataset_qg.spectral_flatness_threshold
+                if dataset_qg is not None
+                else cfg.quality_gate.spectral_flatness_threshold
+            )
             self.quality_gate = QualityGate(
-                snr_threshold=cfg.quality_gate.snr_threshold,
-                spectral_flatness_threshold=cfg.quality_gate.spectral_flatness_threshold,
+                snr_threshold=snr_thresh,
+                spectral_flatness_threshold=flat_thresh,
                 weighting_strategy=cfg.quality_gate.weighting_strategy,
                 alpha=getattr(cfg.quality_gate, "alpha", 0.5),
                 beta=getattr(cfg.quality_gate, "beta", 10.0),

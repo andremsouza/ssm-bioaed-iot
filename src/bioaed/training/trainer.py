@@ -97,8 +97,11 @@ class FabricTrainer:
             model.train()
             train_loss = 0.0
             num_batches = 0
+            all_weights: list[torch.Tensor] = []
 
             for batch_idx, (spectrogram, labels, quality_weights) in enumerate(train_loader):
+                all_weights.append(quality_weights.detach().cpu())
+
                 # Forward pass
                 logits = model(spectrogram)
                 loss_unreduced = criterion(logits, labels)
@@ -123,6 +126,17 @@ class FabricTrainer:
                 num_batches += 1
 
             avg_train_loss = train_loss / max(num_batches, 1)
+
+            # Log quality-weight distribution once per epoch (epoch 1 and every 5th)
+            if epoch == 0 or (epoch + 1) % 5 == 0:
+                w = torch.cat(all_weights)
+                logger.info(
+                    f"Epoch {epoch + 1} quality weights — "
+                    f"mean={w.mean():.4f} std={w.std():.4f} "
+                    f"p10={w.quantile(0.10):.4f} p50={w.median():.4f} "
+                    f"p90={w.quantile(0.90):.4f} "
+                    f"low(<0.3)={((w < 0.3).sum() / len(w) * 100):.1f}%"
+                )
 
             # Step scheduler
             if scheduler is not None:

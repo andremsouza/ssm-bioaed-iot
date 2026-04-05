@@ -1,6 +1,9 @@
 enabled: true
-snr_threshold: 0.0
-spectral_flatness_threshold: 0.0
+# Global fallback thresholds — in practice each dataset config supplies its own
+# calibrated values under a `quality_gate:` block, which the datamodule prefers
+# over these. These values are kept as a safe default (calibrated on aswine).
+snr_threshold: 3.1
+spectral_flatness_threshold: 0.0015
 weighting_strategy: "soft" # soft | hard
 alpha: 0.5   # SNR sigmoid scale
 beta: 10.0   # Spectral flatness sigmoid scale

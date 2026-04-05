@@ -10,3 +10,10 @@ batch_size: 32
 num_workers: 4
 pin_memory: true
 normalize: true
+
+# Quality-gate thresholds calibrated on 1000 anuraset samples (calibrate_quality_gate.py)
+# SNR: mean=7.6 dB, std=5.4 — threshold at p25 (much wider range than aswine)
+# Flatness: mean=0.0253, std=0.0244 — threshold at p75 (23× higher than aswine, noisier env)
+quality_gate:
+  snr_threshold: 2.8
+  spectral_flatness_threshold: 0.0348
