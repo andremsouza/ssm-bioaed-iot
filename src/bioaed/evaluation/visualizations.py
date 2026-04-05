@@ -46,7 +46,7 @@ def plot_cd_diagram(
         output_path = FIGURES_DIR / f"cd_{result.metric}.pdf"
 
     fig, ax = plt.subplots(figsize=(10, 4))
-    autorank.plot_stats(result.autorank_result, ax=ax)
+    autorank.plot_stats(result.autorank_result, ax=ax, allow_insignificant=True)
     ax.set_title(f"Critical Difference — {result.metric}")
     fig.tight_layout()
     fig.savefig(output_path, dpi=300, bbox_inches="tight")

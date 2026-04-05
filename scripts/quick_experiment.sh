@@ -2,74 +2,79 @@
 # ============================================================================
 # quick_experiment.sh — Fast DCQG hypothesis test
 #
-# Runs a reduced ablation (20 epochs, 3 seeds) comparing DCQG on vs off,
-# then generates statistical analysis and figures.
+# Runs a reduced ablation comparing DCQG on vs off, then generates
+# statistical analysis and figures.
+#
+# Modes (mutually exclusive, first flag wins):
+#   (default)    quick_pilot    — inceptiontime × aswine × 5 seeds  = 10 runs
+#   --extended   extended_pilot — 3 models × 2 datasets × 5 seeds   = 60 runs
+#   --full       full_matrix    — 3 models × 2 datasets × 10 seeds  = 120 runs
+#
+# Options:
+#   --skip-ablation   skip training, re-run analysis only
+#   --resume          skip runs whose output directory already exists
 #
 # Usage:
-#   bash scripts/quick_experiment.sh                # defaults: inceptiontime + aswine
-#   bash scripts/quick_experiment.sh --full         # all 3 models × 2 datasets (60 runs)
-#   EPOCHS=50 SEEDS=5 bash scripts/quick_experiment.sh  # override via env vars
+#   bash scripts/quick_experiment.sh
+#   bash scripts/quick_experiment.sh --extended
+#   bash scripts/quick_experiment.sh --full
+#   bash scripts/quick_experiment.sh --skip-ablation
 # ============================================================================
 set -euo pipefail
 
-# ---------- configurable via environment variables ----------
-MODEL="${MODEL:-inceptiontime}"
-DATASET="${DATASET:-aswine}"
-EPOCHS="${EPOCHS:-20}"
-PATIENCE="${PATIENCE:-5}"
-SEEDS="${SEEDS:-0,1,2}"
-PRECISION="${PRECISION:-32}"
-FULL="${1:-}"
-
 cd "$(dirname "$0")/.."
+
+# ---------- defaults ----------
+ABLATION_PROFILE="quick_pilot"
+SKIP_ABLATION=false
+RESUME=false
+
+# ---------- parse flags ----------
+for arg in "$@"; do
+    case "$arg" in
+        --full)       ABLATION_PROFILE="full_matrix" ;;
+        --extended)   ABLATION_PROFILE="extended_pilot" ;;
+        --skip-ablation) SKIP_ABLATION=true ;;
+        --resume)     RESUME=true ;;
+        *) echo "Unknown flag: $arg"; exit 1 ;;
+    esac
+done
+
+# ---------- derive run count from profile ----------
+case "$ABLATION_PROFILE" in
+    quick_pilot)    TOTAL_RUNS=10  ; LABEL="PILOT    (10 runs, 1 model × 1 dataset × 5 seeds)" ;;
+    extended_pilot) TOTAL_RUNS=60  ; LABEL="EXTENDED (60 runs, 3 models × 2 datasets × 5 seeds)" ;;
+    full_matrix)    TOTAL_RUNS=120 ; LABEL="FULL     (120 runs, 3 models × 2 datasets × 10 seeds)" ;;
+esac
+
 echo "=== Quick DCQG Experiment ==="
 echo "Working directory: $(pwd)"
-echo ""
-
-if [[ "$FULL" == "--full" ]]; then
-    MODEL="inceptiontime,ast,audio_mamba"
-    DATASET="aswine,anuraset"
-    SEEDS="0,1,2,3,4"
-    n_models=3; n_datasets=2; n_seeds=5
-    total=$((n_models * n_datasets * 2 * n_seeds))
-    echo "Mode:    FULL (${total} runs)"
-else
-    IFS=',' read -ra _m <<< "$MODEL"; n_models=${#_m[@]}
-    IFS=',' read -ra _d <<< "$DATASET"; n_datasets=${#_d[@]}
-    IFS=',' read -ra _s <<< "$SEEDS"; n_seeds=${#_s[@]}
-    total=$((n_models * n_datasets * 2 * n_seeds))
-    echo "Mode:    PILOT (${total} runs)"
-fi
-
-echo "Models:  ${MODEL}"
-echo "Datasets:${DATASET}"
-echo "Seeds:   ${SEEDS}"
-echo "Epochs:  ${EPOCHS} (patience=${PATIENCE})"
-echo "Prec:    ${PRECISION}"
+echo "Mode:    ${LABEL}"
+echo "Profile: configs/ablation/${ABLATION_PROFILE}.yaml"
+[[ "$RESUME" == true ]]        && echo "Resume:  ON (skipping existing output dirs)"
+[[ "$SKIP_ABLATION" == true ]] && echo "Ablation: SKIPPED (analysis only)"
 echo ""
 
 # ---------- step 1: ablation runs ----------
-echo ">>> Step 1/3: Running ablation..."
-python -m bioaed.ablation --multirun \
-    model="${MODEL}" \
-    dataset="${DATASET}" \
-    quality_gate.enabled=true,false \
-    training.max_epochs="${EPOCHS}" \
-    training.patience="${PATIENCE}" \
-    training.warmup_epochs=2 \
-    training.precision="${PRECISION}" \
-    seed="${SEEDS}"
+if [[ "$SKIP_ABLATION" == false ]]; then
+    echo ">>> Step 1/2: Running ablation (${TOTAL_RUNS} runs)..."
+    python -m bioaed.ablation +ablation="${ABLATION_PROFILE}" --multirun
+    echo ""
+else
+    echo ">>> Step 1/2: Ablation skipped."
+    echo ""
+fi
 
-echo ""
-echo ">>> Step 2/3: Generating analysis & figures..."
+# ---------- step 2: analysis & figures ----------
+echo ">>> Step 2/2: Generating analysis & figures..."
 python -m bioaed.evaluation.report_generator
 
 echo ""
-echo ">>> Step 3/3: Done!"
+echo "=== Done! ==="
 echo ""
 echo "Results:"
 echo "  outputs/ablation/   — per-run checkpoints & metrics"
-echo "  reports/             — statistical reports & figures"
+echo "  reports/            — statistical reports & figures"
 echo ""
 if [[ -f reports/stats_mAP.txt ]]; then
     echo "--- Statistical summary (mAP) ---"

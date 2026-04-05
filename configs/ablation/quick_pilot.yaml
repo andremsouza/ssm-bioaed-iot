@@ -1,13 +1,12 @@
 # @package _global_
 #
 # Quick pilot experiment for DCQG hypothesis testing.
-# Reduced epochs/patience and fewer seeds for fast iteration.
+# Reduced epochs/patience; 5 seeds (minimum required by autorank for CD diagrams).
 #
 # Usage:
-#   python -m bioaed.ablation --config-name config \
-#       +ablation=quick_pilot --multirun
+#   python -m bioaed.ablation +ablation=quick_pilot --multirun
 #
-# Total runs: 1 model × 1 dataset × 2 DCQG states × 3 seeds = 6
+# Total runs: 1 model × 1 dataset × 2 DCQG states × 5 seeds = 10
 
 defaults:
   - override /dataset: aswine
@@ -20,13 +19,13 @@ seed: 42
 experiment_name: "quick_pilot"
 
 training:
-  max_epochs: 20
-  patience: 5
-  warmup_epochs: 2
-  precision: "32"
+  max_epochs: 30
+  patience: 7
+  warmup_epochs: 3
+  precision: "bf16-mixed"
 
 dataset:
-  num_workers: 2
+  num_workers: 4
   batch_size: 64
 
 hydra:
@@ -34,4 +33,4 @@ hydra:
   sweeper:
     params:
       quality_gate.enabled: "true,false"
-      seed: "0,1,2"
+      seed: "0,1,2,3,4"

@@ -1,0 +1,39 @@
+# @package _global_
+#
+# Extended pilot: all models × both datasets × 5 seeds.
+# Provides sufficient statistical power for autorank / CD diagrams.
+# Trains longer than quick_pilot but still shorter than the full matrix.
+#
+# Usage:
+#   python -m bioaed.ablation +ablation=extended_pilot --multirun
+#
+# Total runs: 3 models × 2 datasets × 2 DCQG states × 5 seeds = 60
+
+defaults:
+  - override /dataset: aswine
+  - override /model: inceptiontime
+  - override /training: default
+  - override /quality_gate: default
+  - override /augmentation: default
+
+seed: 42
+experiment_name: "extended_pilot"
+
+training:
+  max_epochs: 50
+  patience: 10
+  warmup_epochs: 5
+  precision: "bf16-mixed"
+
+dataset:
+  num_workers: 4
+  batch_size: 64
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model: inceptiontime,ast,audio_mamba
+      dataset: aswine,anuraset
+      quality_gate.enabled: "true,false"
+      seed: "0,1,2,3,4"
