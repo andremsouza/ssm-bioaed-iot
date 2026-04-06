@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 import torch
 
 from bioaed.features.quality_gate import QualityGate
@@ -84,3 +85,33 @@ class TestQualityGate:
 
         weight = gate.compute_confidence_weight(waveform)
         assert weight.item() in (0.0, 1.0)
+
+
+class TestQualityGateEdgeCases:
+    """Edge-case coverage for quality gate branches."""
+
+    def test_compute_snr_very_short_audio_returns_zero(self) -> None:
+        """Audio shorter than 5 energy frames must return SNR=0.0."""
+        # 100 samples → frame_length=100, hop=25 → 1 frame < 5 → early return
+        waveform = torch.randn(1, 100)
+        snr = QualityGate.compute_snr(waveform)
+        assert snr == pytest.approx(0.0)
+
+    def test_flatness_limit_zero_threshold_is_one(self) -> None:
+        """When spectral_flatness_threshold=0, _flatness_limit should be 1.0."""
+        gate = QualityGate(
+            snr_threshold=5.0,
+            spectral_flatness_threshold=0.0,
+            weighting_strategy="hard",
+        )
+        assert gate._flatness_limit == pytest.approx(1.0)
+
+    def test_flatness_limit_positive_threshold_is_threshold(self) -> None:
+        """When spectral_flatness_threshold>0, _flatness_limit should equal the threshold."""
+        gate = QualityGate(
+            snr_threshold=5.0,
+            spectral_flatness_threshold=0.3,
+            weighting_strategy="hard",
+        )
+        assert gate._flatness_limit == pytest.approx(0.3)
+

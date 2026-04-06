@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import math
+from unittest.mock import patch
+
 import numpy as np
+import pytest
 import torch
 
 from bioaed.evaluation.metrics import compute_metrics
@@ -51,3 +55,33 @@ class TestComputeMetrics:
         metrics = compute_metrics(logits, labels)
         # Class 1 has all zeros — AUC is undefined
         assert math.isnan(metrics["auc_class_1"])
+
+
+class TestComputeMetricsFallbacks:
+    """Tests covering the ValueError fallback paths in compute_metrics."""
+
+    def test_roc_auc_weighted_fallback_to_zero(self) -> None:
+        """When roc_auc_score raises ValueError, roc_auc_weighted must be 0.0."""
+        with patch("bioaed.evaluation.metrics.roc_auc_score", side_effect=ValueError("degenerate")):
+            metrics = compute_metrics(torch.zeros(4, 3), torch.zeros(4, 3))
+        assert metrics["roc_auc_weighted"] == pytest.approx(0.0)
+
+    def test_map_fallback_to_zero(self) -> None:
+        """When average_precision_score raises ValueError, mAP must be 0.0."""
+        with patch(
+            "bioaed.evaluation.metrics.average_precision_score",
+            side_effect=ValueError("degenerate"),
+        ):
+            metrics = compute_metrics(torch.zeros(4, 3), torch.zeros(4, 3))
+        assert metrics["mAP"] == pytest.approx(0.0)
+
+    def test_per_class_auc_fallback_to_zero(self) -> None:
+        """When per-class roc_auc_score raises ValueError, the class AUC must be 0.0."""
+        with patch(
+            "bioaed.evaluation.metrics.roc_auc_score",
+            side_effect=ValueError("single class"),
+        ):
+            metrics = compute_metrics(torch.zeros(4, 2), torch.zeros(4, 2))
+        assert metrics["auc_class_0"] == pytest.approx(0.0)
+        assert metrics["auc_class_1"] == pytest.approx(0.0)
+

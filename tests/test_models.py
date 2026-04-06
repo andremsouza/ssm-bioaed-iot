@@ -85,6 +85,57 @@ class TestAudioMamba:
         assert logits.shape == (2, 7)
 
 
+class TestPatchEmbedding1D:
+    """Tests for PatchEmbedding1D — no mamba-ssm or CUDA required."""
+
+    def test_forward_shape(self) -> None:
+        """Output should be (batch, num_patches, d_model)."""
+        from bioaed.models.audio_mamba import PatchEmbedding1D
+
+        pe = PatchEmbedding1D(in_channels=64, d_model=128, patch_size=16)
+        x = torch.randn(2, 64, 96)  # 96/16 = 6 patches
+        out = pe(x)
+        assert out.shape == (2, 6, 128)
+
+    def test_init_creates_layers(self) -> None:
+        """Init should create proj (Conv1d) and norm (LayerNorm)."""
+        import torch.nn as nn
+
+        from bioaed.models.audio_mamba import PatchEmbedding1D
+
+        pe = PatchEmbedding1D(in_channels=32, d_model=64, patch_size=8)
+        assert isinstance(pe.proj, nn.Conv1d)
+        assert isinstance(pe.norm, nn.LayerNorm)
+
+
+class TestMambaImportError:
+    """Test ImportError paths when mamba-ssm is not installed (CPU-only env)."""
+
+    def test_bidir_mamba_block_raises_import_error(self) -> None:
+        """BidirectionalMambaBlock must raise ImportError when mamba-ssm is absent."""
+        from bioaed.models.audio_mamba import _MAMBA_AVAILABLE
+
+        if _MAMBA_AVAILABLE:
+            pytest.skip("mamba-ssm is installed; cannot test ImportError path")
+
+        from bioaed.models.audio_mamba import BidirectionalMambaBlock
+
+        with pytest.raises(ImportError, match="mamba-ssm"):
+            BidirectionalMambaBlock(d_model=64, d_state=8)
+
+    def test_audio_mamba_raises_import_error(self) -> None:
+        """AudioMamba must raise ImportError when mamba-ssm is absent."""
+        from bioaed.models.audio_mamba import _MAMBA_AVAILABLE
+
+        if _MAMBA_AVAILABLE:
+            pytest.skip("mamba-ssm is installed; cannot test ImportError path")
+
+        from bioaed.models.audio_mamba import AudioMamba
+
+        with pytest.raises(ImportError, match="mamba-ssm"):
+            AudioMamba(num_classes=7, d_model=64)
+
+
 class TestBuildModel:
     """Tests for the model registry and build_model factory."""
 

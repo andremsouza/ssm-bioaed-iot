@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import runpy
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -159,3 +161,15 @@ class TestAggregateEmpty:
         )
         summary = aggregate_results(df, metric="mAP")
         assert len(summary) == 0
+
+
+class TestAnalysisMainBlock:
+    """Covers the ``if __name__ == '__main__'`` block in analysis.py."""
+
+    def test_main_block_runs_with_existing_results(self) -> None:
+        """Running analysis as __main__ should call load/aggregate/print without error."""
+        # Suppress stdout from print() calls inside the __main__ block
+        with patch("builtins.print"):
+            # runpy executes the if __name__ == "__main__" block
+            runpy.run_module("bioaed.analysis", run_name="__main__", alter_sys=False)
+

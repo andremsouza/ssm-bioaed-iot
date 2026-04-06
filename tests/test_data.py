@@ -141,6 +141,64 @@ class TestAnuraSetDataset:
         assert offset == 0.0
 
 
+class TestASwineDatasetErrors:
+    """Unit tests for ASwineDataset error paths (no real data required)."""
+
+    def test_missing_csv_raises(self, tmp_path: Path) -> None:
+        """ASwineDataset should raise FileNotFoundError when the CSV is absent."""
+        with pytest.raises(FileNotFoundError, match="Metadata CSV not found"):
+            ASwineDataset(
+                root_dir=tmp_path,
+                meta_variant="1s_pruned",
+                split="train",
+                sample_rate=16000,
+                segment_duration=1.0,
+                num_classes=7,
+                hop_length=160,
+                win_length=400,
+            )
+
+
+class TestAnuraSetDatasetErrors:
+    """Unit tests for AnuraSetDataset error paths (no real data required)."""
+
+    def test_missing_metadata_raises(self, tmp_path: Path) -> None:
+        """AnuraSetDataset should raise FileNotFoundError when metadata.csv is absent."""
+        with pytest.raises(FileNotFoundError, match="Metadata CSV not found"):
+            AnuraSetDataset(
+                root_dir=tmp_path,
+                split="test",
+                sample_rate=22050,
+                segment_duration=3.0,
+                num_classes=42,
+                hop_length=220,
+                win_length=550,
+            )
+
+    @needs_anuraset
+    def test_train_split_nonempty(self) -> None:
+        """Regression test: split='train' must load samples (the _split_map bug)."""
+        ds = AnuraSetDataset(
+            root_dir=ANURASET_ROOT,
+            split="train",
+            sample_rate=22050,
+            segment_duration=3.0,
+            num_classes=42,
+            hop_length=220,
+            win_length=550,
+        )
+        assert len(ds) > 0, "train split must not be empty"
+        assert len(ds) > len(AnuraSetDataset(
+            root_dir=ANURASET_ROOT,
+            split="test",
+            sample_rate=22050,
+            segment_duration=3.0,
+            num_classes=42,
+            hop_length=220,
+            win_length=550,
+        )), "train should be larger than test"
+
+
 class TestBioacousticDataModule:
     """Integration tests for the data module factory."""
 

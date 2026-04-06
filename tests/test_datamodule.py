@@ -118,3 +118,86 @@ class TestDataModuleSetup:
             dm.val_dataloader()
         with pytest.raises(AssertionError):
             dm.test_dataloader()
+
+    def test_with_normalize(self) -> None:
+        """Setting normalize=True triggers _compute_normalization_stats."""
+        dm = BioacousticDataModule(_make_cfg(normalize=True))
+        dm.setup()
+        assert dm.znormalize is not None
+        assert dm.train_dataset is not None
+
+
+class TestDataModuleErrors:
+    """Unit tests for error paths that do not require real data."""
+
+    def test_unknown_dataset_raises(self) -> None:
+        """Requesting an unknown dataset name must raise ValueError."""
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "dataset": {
+                    "name": "nonexistent_dataset",
+                    "root_dir": "data/nonexistent",
+                    "sample_rate": 16000,
+                    "segment_duration": 1.0,
+                    "n_mels": 64,
+                    "hop_length": 160,
+                    "win_length": 400,
+                    "num_classes": 7,
+                    "batch_size": 4,
+                    "num_workers": 0,
+                    "pin_memory": False,
+                },
+                "quality_gate": {
+                    "enabled": False,
+                    "snr_threshold": 0.0,
+                    "spectral_flatness_threshold": 0.0,
+                    "weighting_strategy": "soft",
+                    "alpha": 0.5,
+                    "beta": 10.0,
+                },
+            }
+        )
+        dm = BioacousticDataModule(cfg)
+        with pytest.raises(ValueError, match="Unknown dataset"):
+            dm.setup()
+
+    def test_dataset_level_quality_gate_override(self) -> None:
+        """Dataset-level quality_gate thresholds should override the global ones."""
+        cfg = OmegaConf.create(
+            {
+                "seed": 42,
+                "dataset": {
+                    "name": "aswine",
+                    "root_dir": "data/aswine",
+                    "meta_variant": "1s_pruned",
+                    "sample_rate": 16000,
+                    "segment_duration": 1.0,
+                    "n_mels": 64,
+                    "hop_length": 160,
+                    "win_length": 400,
+                    "num_classes": 7,
+                    "batch_size": 4,
+                    "num_workers": 0,
+                    "pin_memory": False,
+                    # Dataset-level QG overrides — must take precedence
+                    "quality_gate": {
+                        "snr_threshold": 3.1,
+                        "spectral_flatness_threshold": 0.0015,
+                    },
+                },
+                "quality_gate": {
+                    "enabled": True,
+                    "snr_threshold": 0.0,  # global fallback — should NOT be used
+                    "spectral_flatness_threshold": 0.0,
+                    "weighting_strategy": "soft",
+                    "alpha": 0.5,
+                    "beta": 10.0,
+                },
+            }
+        )
+        dm = BioacousticDataModule(cfg)
+        assert dm.quality_gate is not None
+        assert dm.quality_gate.snr_threshold == pytest.approx(3.1)
+        assert dm.quality_gate.spectral_flatness_threshold == pytest.approx(0.0015)
+
