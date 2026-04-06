@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from bioaed.models import MODEL_REGISTRY, build_model
+from bioaed.models import MODEL_REGISTRY, _CLASS_NAME_TO_KEY, build_model
 from bioaed.models.inceptiontime import InceptionTime
 
 
@@ -155,3 +155,54 @@ class TestBuildModel:
         x = torch.randn(2, 32, 50)
         out = model(x)
         assert out.shape == (2, 5)
+
+
+class TestClassNameToKey:
+    """Tests for the _CLASS_NAME_TO_KEY reverse-lookup mapping."""
+
+    def test_inceptiontime_class_resolves(self) -> None:
+        # Class name lowercased must map to the registry key.
+        assert _CLASS_NAME_TO_KEY["inceptiontime"] == "inceptiontime"
+
+    def test_ast_class_resolves(self) -> None:
+        if "ast" not in MODEL_REGISTRY:
+            pytest.skip("timm not installed; AST not registered")
+        assert _CLASS_NAME_TO_KEY["audiospectrogramtransformer"] == "ast"
+
+    def test_audio_mamba_class_resolves(self) -> None:
+        if "audio_mamba" not in MODEL_REGISTRY:
+            pytest.skip("mamba-ssm not installed; AudioMamba not registered")
+        assert _CLASS_NAME_TO_KEY["audiomamba"] == "audio_mamba"
+
+    def test_all_registry_keys_covered(self) -> None:
+        # Every key in MODEL_REGISTRY must be reachable via _CLASS_NAME_TO_KEY.
+        reachable_keys = set(_CLASS_NAME_TO_KEY.values())
+        assert set(MODEL_REGISTRY.keys()) == reachable_keys
+
+    def test_target_string_resolution_ast(self) -> None:
+        # Simulate what ablation/train/evaluate do with a Hydra _target_ string.
+        if "ast" not in MODEL_REGISTRY:
+            pytest.skip("timm not installed")
+        target = "bioaed.models.ast_model.AudioSpectrogramTransformer"
+        class_name = target.rsplit(".", 1)[-1].lower()
+        model_key = _CLASS_NAME_TO_KEY.get(class_name, class_name)
+        assert model_key == "ast"
+
+    def test_target_string_resolution_audio_mamba(self) -> None:
+        if "audio_mamba" not in MODEL_REGISTRY:
+            pytest.skip("mamba-ssm not installed")
+        target = "bioaed.models.audio_mamba.AudioMamba"
+        class_name = target.rsplit(".", 1)[-1].lower()
+        model_key = _CLASS_NAME_TO_KEY.get(class_name, class_name)
+        assert model_key == "audio_mamba"
+
+    def test_target_string_resolution_inceptiontime(self) -> None:
+        target = "bioaed.models.inceptiontime.InceptionTime"
+        class_name = target.rsplit(".", 1)[-1].lower()
+        model_key = _CLASS_NAME_TO_KEY.get(class_name, class_name)
+        assert model_key == "inceptiontime"
+
+    def test_unknown_class_falls_through(self) -> None:
+        # An unknown class name should fall through unchanged (not raise here).
+        model_key = _CLASS_NAME_TO_KEY.get("completelymadeupclassname", "completelymadeupclassname")
+        assert model_key == "completelymadeupclassname"

@@ -12,7 +12,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
 from bioaed.data.datamodule import BioacousticDataModule
-from bioaed.models import build_model
+from bioaed.models import _CLASS_NAME_TO_KEY, build_model
 from bioaed.training.trainer import FabricTrainer
 from bioaed.utils.reproducibility import seed_everything
 
@@ -147,8 +147,9 @@ def objective(trial: optuna.Trial, cfg: DictConfig) -> float:
     model_cfg = OmegaConf.to_container(trial_omegaconf.model, resolve=True)
     assert isinstance(model_cfg, dict)
     target = model_cfg.pop("_target_", "")
-    model_name_short = target.rsplit(".", 1)[-1] if target else "inceptiontime"
-    model = build_model(model_name_short.lower(), **model_cfg)  # type: ignore[arg-type]
+    class_name = target.rsplit(".", 1)[-1].lower() if target else "inceptiontime"
+    model_name_short = _CLASS_NAME_TO_KEY.get(class_name, class_name)
+    model = build_model(model_name_short, **model_cfg)  # type: ignore[arg-type]
 
     # Create Fabric
     fabric = Fabric(

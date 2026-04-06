@@ -25,7 +25,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from bioaed.data.datamodule import BioacousticDataModule
 from bioaed.evaluation.metrics import compute_metrics
-from bioaed.models import build_model
+from bioaed.models import _CLASS_NAME_TO_KEY, build_model
 from bioaed.training.trainer import FabricTrainer
 from bioaed.utils.logging import configure_logging
 from bioaed.utils.reproducibility import seed_everything
@@ -57,8 +57,9 @@ def _train_and_evaluate(
     model_cfg = OmegaConf.to_container(cfg.model, resolve=True)
     assert isinstance(model_cfg, dict)
     target = model_cfg.pop("_target_", "")
-    model_name = target.rsplit(".", 1)[-1] if target else "inceptiontime"
-    model = build_model(model_name.lower(), **model_cfg)  # type: ignore[arg-type]
+    class_name = target.rsplit(".", 1)[-1].lower() if target else "inceptiontime"
+    model_name = _CLASS_NAME_TO_KEY.get(class_name, class_name)
+    model = build_model(model_name, **model_cfg)  # type: ignore[arg-type]
 
     fabric = Fabric(accelerator="auto", precision=cfg.training.precision)
     trainer = FabricTrainer(cfg=cfg, fabric=fabric, output_dir=str(output_dir))

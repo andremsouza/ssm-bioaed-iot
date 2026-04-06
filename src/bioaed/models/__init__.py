@@ -27,6 +27,13 @@ try:
 except ImportError:
     pass
 
+# Reverse lookup: lowercase class name → registry key.
+# Allows callers to derive the registry key from a Hydra ``_target_`` string
+# (e.g. ``"audiospectrogramtransformer"`` → ``"ast"``).
+_CLASS_NAME_TO_KEY: dict[str, str] = {
+    cls.__name__.lower(): key for key, cls in MODEL_REGISTRY.items()
+}
+
 
 def build_model(model_key: str, **kwargs: Any) -> nn.Module:
     """Instantiate a model from the registry.

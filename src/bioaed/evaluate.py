@@ -17,7 +17,7 @@ from bioaed.evaluation.profiler import (
     estimate_macs,
     measure_throughput,
 )
-from bioaed.models import build_model
+from bioaed.models import _CLASS_NAME_TO_KEY, build_model
 from bioaed.utils.logging import configure_logging
 from bioaed.utils.reproducibility import seed_everything
 
@@ -41,8 +41,9 @@ def main(cfg: DictConfig) -> None:
     model_cfg = OmegaConf.to_container(cfg.model, resolve=True)
     assert isinstance(model_cfg, dict)
     target = model_cfg.pop("_target_", "")
-    model_name = target.rsplit(".", 1)[-1] if target else "inceptiontime"
-    model = build_model(model_name.lower(), **model_cfg)  # type: ignore[arg-type]
+    class_name = target.rsplit(".", 1)[-1].lower() if target else "inceptiontime"
+    model_name = _CLASS_NAME_TO_KEY.get(class_name, class_name)
+    model = build_model(model_name, **model_cfg)  # type: ignore[arg-type]
 
     # Load checkpoint
     ckpt_path = Path("outputs/checkpoint_best.pt")
@@ -73,12 +74,7 @@ def main(cfg: DictConfig) -> None:
     # Profiling
     input_shape = (
         cfg.dataset.n_mels,
-        int(
-            cfg.dataset.segment_duration
-            * cfg.dataset.sample_rate
-            / cfg.dataset.hop_length
-        )
-        + 1,
+        int(cfg.dataset.segment_duration * cfg.dataset.sample_rate / cfg.dataset.hop_length) + 1,
     )
     params = count_parameters(model)
     macs = estimate_macs(model, input_shape)

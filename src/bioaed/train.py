@@ -8,7 +8,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
 from bioaed.data.datamodule import BioacousticDataModule
-from bioaed.models import build_model
+from bioaed.models import _CLASS_NAME_TO_KEY, build_model
 from bioaed.training.trainer import FabricTrainer
 from bioaed.utils.config_schemas import ExperimentConfig
 from bioaed.utils.logging import configure_logging, log_config
@@ -45,8 +45,9 @@ def main(cfg: DictConfig) -> None:
     model_cfg = OmegaConf.to_container(cfg.model, resolve=True)
     assert isinstance(model_cfg, dict)
     target = model_cfg.pop("_target_", "")
-    model_name = target.rsplit(".", 1)[-1] if target else "inceptiontime"
-    model = build_model(model_name.lower(), **model_cfg)  # type: ignore[arg-type]
+    class_name = target.rsplit(".", 1)[-1].lower() if target else "inceptiontime"
+    model_name = _CLASS_NAME_TO_KEY.get(class_name, class_name)
+    model = build_model(model_name, **model_cfg)  # type: ignore[arg-type]
 
     param_count = sum(p.numel() for p in model.parameters())
     logger.info(f"Model: {model_name} | Parameters: {param_count:,}")
