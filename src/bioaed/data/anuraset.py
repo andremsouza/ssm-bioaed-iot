@@ -31,8 +31,6 @@ class AnuraSetDataset(AudioDataset):
         quality_gate: QualityGate | None = None,
         **kwargs: Any,
     ) -> None:
-        # Map our standard split names to AnuraSet's column values
-        self._split_map = {"train": "training", "test": "test"}
         super().__init__(
             root_dir=root_dir,
             split=split,
@@ -54,9 +52,8 @@ class AnuraSetDataset(AudioDataset):
 
         df = pd.read_csv(csv_path)
 
-        # Filter by subset column
-        subset_value = self._split_map.get(self.split, self.split)
-        df_split = df[df["subset"] == subset_value].reset_index(drop=True)
+        # Filter by subset column — CSV uses "train" and "test" directly
+        df_split = df[df["subset"] == self.split].reset_index(drop=True)
 
         # Identify species columns (all columns after 'subset')
         species_start_idx = df_split.columns.get_loc("subset") + 1  # type: ignore[operator]
