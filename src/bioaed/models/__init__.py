@@ -28,20 +28,20 @@ except ImportError:
     pass
 
 
-def build_model(model_name: str, **kwargs: Any) -> nn.Module:
+def build_model(model_key: str, **kwargs: Any) -> nn.Module:
     """Instantiate a model from the registry.
 
     Args:
-        model_name: Key in the model registry (e.g., ``"inceptiontime"``).
+        model_key: Key in the model registry (e.g., ``"inceptiontime"``).
         **kwargs: Model constructor keyword arguments.
 
     Returns:
         Instantiated ``nn.Module``.
 
     Raises:
-        ValueError: If ``model_name`` is not in the registry.
+        ValueError: If ``model_key`` is not in the registry.
     """
-    if model_name not in MODEL_REGISTRY:
-        msg = f"Unknown model: {model_name}. Available: {list(MODEL_REGISTRY)}"
+    if model_key not in MODEL_REGISTRY:
+        msg = f"Unknown model: {model_key}. Available: {list(MODEL_REGISTRY)}"
         raise ValueError(msg)
-    return MODEL_REGISTRY[model_name](**kwargs)
+    return MODEL_REGISTRY[model_key](**kwargs)
