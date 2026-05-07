@@ -15,7 +15,6 @@ from torch.utils.data import DataLoader, Dataset, Subset
 
 from bioaed.data.anuraset import AnuraSetDataset
 from bioaed.data.aswine import ASwineDataset
-from bioaed.features.quality_gate import QualityGate
 from bioaed.features.transforms import SpecAugment, ZNormalize
 
 # Dataset factory registry
@@ -39,35 +38,11 @@ class BioacousticDataModule:
     based on the Hydra dataset configuration.
 
     Args:
-        cfg: OmegaConf DictConfig with ``dataset`` and ``quality_gate`` groups.
+        cfg: OmegaConf DictConfig with ``dataset`` group.
     """
 
     def __init__(self, cfg: DictConfig) -> None:
         self.cfg = cfg
-        self.quality_gate: QualityGate | None = None
-
-        if cfg.quality_gate.enabled:
-            # Dataset-specific thresholds (in dataset config) take priority over
-            # the global quality_gate config, since thresholds must be calibrated
-            # per-dataset (SNR and flatness distributions differ across corpora).
-            dataset_qg = getattr(cfg.dataset, "quality_gate", None)
-            snr_thresh = (
-                dataset_qg.snr_threshold
-                if dataset_qg is not None
-                else cfg.quality_gate.snr_threshold
-            )
-            flat_thresh = (
-                dataset_qg.spectral_flatness_threshold
-                if dataset_qg is not None
-                else cfg.quality_gate.spectral_flatness_threshold
-            )
-            self.quality_gate = QualityGate(
-                snr_threshold=snr_thresh,
-                spectral_flatness_threshold=flat_thresh,
-                weighting_strategy=cfg.quality_gate.weighting_strategy,
-                alpha=getattr(cfg.quality_gate, "alpha", 0.5),
-                beta=getattr(cfg.quality_gate, "beta", 10.0),
-            )
 
         self.train_dataset: Dataset[Any] | None = None
         self.val_dataset: Dataset[Any] | None = None
@@ -103,7 +78,6 @@ class BioacousticDataModule:
             "hop_length": self.cfg.dataset.hop_length,
             "win_length": self.cfg.dataset.win_length,
             "num_classes": self.cfg.dataset.num_classes,
-            "quality_gate": self.quality_gate,
         }
 
         # Dataset-specific kwargs
@@ -194,7 +168,7 @@ class BioacousticDataModule:
         frame_count = 0
 
         for idx in idx_sample:
-            spec, _, _ = dataset[int(idx)]
+            spec, _ = dataset[int(idx)]
             channel_sum += spec.sum(dim=1)
             channel_sq_sum += (spec**2).sum(dim=1)
             frame_count += spec.shape[1]
@@ -237,12 +211,14 @@ class BioacousticDataModule:
     def train_dataloader(self) -> DataLoader[Any]:
         """Create the training DataLoader."""
         assert self.train_dataset is not None, "Call setup() first"
+        nw = self.cfg.dataset.num_workers
         return DataLoader(
             self.train_dataset,
             batch_size=self.cfg.dataset.batch_size,
             shuffle=True,
-            num_workers=self.cfg.dataset.num_workers,
+            num_workers=nw,
             pin_memory=self.cfg.dataset.pin_memory,
+            persistent_workers=nw > 0,
             drop_last=True,
             worker_init_fn=_seed_worker,
             generator=torch.Generator().manual_seed(self.cfg.seed),
@@ -251,23 +227,27 @@ class BioacousticDataModule:
     def val_dataloader(self) -> DataLoader[Any]:
         """Create the validation DataLoader."""
         assert self.val_dataset is not None, "Call setup() first"
+        nw = self.cfg.dataset.num_workers
         return DataLoader(
             self.val_dataset,
             batch_size=self.cfg.dataset.batch_size,
             shuffle=False,
-            num_workers=self.cfg.dataset.num_workers,
+            num_workers=nw,
             pin_memory=self.cfg.dataset.pin_memory,
+            persistent_workers=nw > 0,
             worker_init_fn=_seed_worker,
         )
 
     def test_dataloader(self) -> DataLoader[Any]:
         """Create the test DataLoader."""
         assert self.test_dataset is not None, "Call setup() first"
+        nw = self.cfg.dataset.num_workers
         return DataLoader(
             self.test_dataset,
             batch_size=self.cfg.dataset.batch_size,
             shuffle=False,
-            num_workers=self.cfg.dataset.num_workers,
+            num_workers=nw,
             pin_memory=self.cfg.dataset.pin_memory,
+            persistent_workers=nw > 0,
             worker_init_fn=_seed_worker,
         )

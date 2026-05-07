@@ -8,7 +8,6 @@ from typing import Any
 import pandas as pd
 
 from bioaed.data.audio_dataset import AudioDataset
-from bioaed.features.quality_gate import QualityGate
 
 # Ordered label columns in the aSwine metadata CSVs
 ASWINE_LABEL_COLUMNS: list[str] = [
@@ -32,7 +31,6 @@ class ASwineDataset(AudioDataset):
         root_dir: Path to the aSwine dataset root (containing ``audio/`` and ``meta/``).
         meta_variant: Which metadata variant to use (``raw``, ``1s``, ``1s_pruned``).
         split: Data split — ``"train"`` or ``"test"``.
-        quality_gate: Optional quality gate for DCAI confidence weighting.
         **kwargs: Additional keyword arguments forwarded to :class:`AudioDataset`.
     """
 
@@ -41,14 +39,12 @@ class ASwineDataset(AudioDataset):
         root_dir: str | Path,
         meta_variant: str = "1s_pruned",
         split: str = "train",
-        quality_gate: QualityGate | None = None,
         **kwargs: Any,
     ) -> None:
         self.meta_variant = meta_variant
         super().__init__(
             root_dir=root_dir,
             split=split,
-            quality_gate=quality_gate,
             **kwargs,
         )
 

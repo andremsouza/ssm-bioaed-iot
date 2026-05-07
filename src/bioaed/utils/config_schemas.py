@@ -50,17 +50,6 @@ class TrainingConfig(BaseModel):
     compile: bool = False
 
 
-class QualityGateConfig(BaseModel):
-    """Schema for data-centric quality gate configuration."""
-
-    enabled: bool = True
-    snr_threshold: float = 0.0
-    spectral_flatness_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
-    weighting_strategy: Literal["soft", "hard"] = "soft"
-    alpha: float = Field(default=0.5, gt=0.0)
-    beta: float = Field(default=10.0, gt=0.0)
-
-
 class AugmentationConfig(BaseModel):
     """Schema for data augmentation configuration."""
 
@@ -78,7 +67,6 @@ class ExperimentConfig(BaseModel):
     experiment_name: str = "default"
     dataset: DatasetConfig
     training: TrainingConfig
-    quality_gate: QualityGateConfig
     augmentation: AugmentationConfig = AugmentationConfig()
 
     model_config = {"extra": "allow"}

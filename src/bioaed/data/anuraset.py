@@ -8,7 +8,6 @@ from typing import Any
 import pandas as pd
 
 from bioaed.data.audio_dataset import AudioDataset
-from bioaed.features.quality_gate import QualityGate
 
 
 class AnuraSetDataset(AudioDataset):
@@ -20,7 +19,6 @@ class AnuraSetDataset(AudioDataset):
     Args:
         root_dir: Path to the AnuraSet dataset root (containing ``audio/`` and ``metadata.csv``).
         split: Data split — ``"training"`` or ``"test"`` (as defined in the ``subset`` column).
-        quality_gate: Optional quality gate for DCAI confidence weighting.
         **kwargs: Additional keyword arguments forwarded to :class:`AudioDataset`.
     """
 
@@ -28,13 +26,11 @@ class AnuraSetDataset(AudioDataset):
         self,
         root_dir: str | Path,
         split: str = "train",
-        quality_gate: QualityGate | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(
             root_dir=root_dir,
             split=split,
-            quality_gate=quality_gate,
             **kwargs,
         )
 

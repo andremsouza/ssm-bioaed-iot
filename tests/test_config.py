@@ -11,7 +11,6 @@ from bioaed.utils.config_schemas import (
     DatasetConfig,
     ExperimentConfig,
     ModelConfig,
-    QualityGateConfig,
     TrainingConfig,
 )
 
@@ -91,21 +90,6 @@ class TestTrainingConfig:
             TrainingConfig(precision="fp8")  # type: ignore[arg-type]
 
 
-class TestQualityGateConfig:
-    """Tests for QualityGateConfig validation."""
-
-    def test_defaults(self) -> None:
-        """Default quality gate config should have correct defaults."""
-        cfg = QualityGateConfig()
-        assert cfg.enabled is True
-        assert cfg.weighting_strategy == "soft"
-
-    def test_invalid_flatness_threshold(self) -> None:
-        """Flatness threshold > 1.0 should raise validation error."""
-        with pytest.raises(ValidationError):
-            QualityGateConfig(spectral_flatness_threshold=2.0)
-
-
 class TestExperimentConfig:
     """Tests for full experiment config validation."""
 
@@ -151,23 +135,6 @@ class TestModelConfig:
             _target_="bioaed.models.inceptiontime.InceptionTime", num_classes=7, depth=3
         )
         assert cfg.num_classes == 7
-
-
-class TestQualityGateConfigExtended:
-    """Extended QualityGateConfig tests for alpha and beta."""
-
-    def test_alpha_positive(self) -> None:
-        with pytest.raises(ValidationError):
-            QualityGateConfig(alpha=0.0)
-
-    def test_beta_positive(self) -> None:
-        with pytest.raises(ValidationError):
-            QualityGateConfig(beta=0.0)
-
-    def test_valid_alpha_beta(self) -> None:
-        cfg = QualityGateConfig(alpha=1.5, beta=5.0)
-        assert cfg.alpha == 1.5
-        assert cfg.beta == 5.0
 
 
 class TestTrainingConfigExtended:

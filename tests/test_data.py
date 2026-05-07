@@ -11,7 +11,6 @@ from omegaconf import OmegaConf
 from bioaed.data.anuraset import AnuraSetDataset
 from bioaed.data.aswine import ASwineDataset, ASWINE_LABEL_COLUMNS
 from bioaed.data.datamodule import BioacousticDataModule
-from bioaed.features.quality_gate import QualityGate
 
 ASWINE_ROOT = Path("data/aswine")
 ANURASET_ROOT = Path("data/anuraset")
@@ -49,7 +48,7 @@ class TestASwineDataset:
 
     @needs_aswine
     def test_getitem_shapes(self) -> None:
-        """A single sample should return (spectrogram, labels, weight) with correct shapes."""
+        """A single sample should return (spectrogram, labels) with correct shapes."""
         ds = ASwineDataset(
             root_dir=ASWINE_ROOT,
             meta_variant="1s_pruned",
@@ -61,29 +60,9 @@ class TestASwineDataset:
             hop_length=160,
             win_length=400,
         )
-        spec, labels, weight = ds[0]
+        spec, labels = ds[0]
         assert spec.shape[0] == 64  # n_mels
         assert labels.shape == (7,)
-        assert weight.shape == ()
-        assert weight.item() == pytest.approx(1.0)  # no quality gate
-
-    @needs_aswine
-    def test_getitem_with_quality_gate(self) -> None:
-        """Quality gate should produce a weight in [0, 1]."""
-        gate = QualityGate(snr_threshold=5.0, spectral_flatness_threshold=0.5)
-        ds = ASwineDataset(
-            root_dir=ASWINE_ROOT,
-            meta_variant="1s_pruned",
-            split="train",
-            sample_rate=16000,
-            segment_duration=1.0,
-            num_classes=7,
-            hop_length=160,
-            win_length=400,
-            quality_gate=gate,
-        )
-        _, _, weight = ds[0]
-        assert 0.0 <= weight.item() <= 1.0
 
 
 class TestAnuraSetDataset:
@@ -119,10 +98,9 @@ class TestAnuraSetDataset:
             hop_length=220,
             win_length=550,
         )
-        spec, labels, weight = ds[0]
+        spec, labels = ds[0]
         assert spec.shape[0] == 64  # n_mels
         assert labels.shape == (42,)
-        assert weight.item() == pytest.approx(1.0)
 
     @needs_anuraset
     def test_audio_path_resolution(self) -> None:
@@ -188,15 +166,17 @@ class TestAnuraSetDatasetErrors:
             win_length=550,
         )
         assert len(ds) > 0, "train split must not be empty"
-        assert len(ds) > len(AnuraSetDataset(
-            root_dir=ANURASET_ROOT,
-            split="test",
-            sample_rate=22050,
-            segment_duration=3.0,
-            num_classes=42,
-            hop_length=220,
-            win_length=550,
-        )), "train should be larger than test"
+        assert len(ds) > len(
+            AnuraSetDataset(
+                root_dir=ANURASET_ROOT,
+                split="test",
+                sample_rate=22050,
+                segment_duration=3.0,
+                num_classes=42,
+                hop_length=220,
+                win_length=550,
+            )
+        ), "train should be larger than test"
 
 
 class TestBioacousticDataModule:
@@ -221,12 +201,6 @@ class TestBioacousticDataModule:
                     "batch_size": 4,
                     "num_workers": 0,
                     "pin_memory": False,
-                },
-                "quality_gate": {
-                    "enabled": False,
-                    "snr_threshold": 0.0,
-                    "spectral_flatness_threshold": 0.0,
-                    "weighting_strategy": "soft",
                 },
             }
         )
@@ -256,19 +230,12 @@ class TestBioacousticDataModule:
                     "num_workers": 0,
                     "pin_memory": False,
                 },
-                "quality_gate": {
-                    "enabled": True,
-                    "snr_threshold": 0.0,
-                    "spectral_flatness_threshold": 0.0,
-                    "weighting_strategy": "soft",
-                },
             }
         )
         dm = BioacousticDataModule(cfg)
         dm.setup()
         batch = next(iter(dm.train_dataloader()))
-        spec, labels, weights = batch
+        spec, labels = batch
         assert spec.shape[0] == 4  # batch size
         assert spec.shape[1] == 64  # n_mels
         assert labels.shape == (4, 7)
-        assert weights.shape == (4,)

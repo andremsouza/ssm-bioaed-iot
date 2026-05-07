@@ -7,14 +7,8 @@ n_mels: 64
 hop_length: 160 # 10ms @ 16kHz
 win_length: 400 # 25ms @ 16kHz
 num_classes: 7
+time_frames: 101  # floor(sample_rate * segment_duration / hop_length) + 1
 batch_size: 64
-num_workers: 4
+num_workers: 8
 pin_memory: true
 normalize: true
-
-# Quality-gate thresholds calibrated on 500 aswine samples (calibrate_quality_gate.py)
-# SNR: mean=5.5 dB, std=3.5 — threshold at p25
-# Flatness: mean=0.0012, std=0.0009 — threshold at p75
-quality_gate:
-  snr_threshold: 3.1
-  spectral_flatness_threshold: 0.0015

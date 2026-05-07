@@ -6,14 +6,8 @@ n_mels: 64
 hop_length: 220 # ~10ms @ 22050Hz
 win_length: 550 # ~25ms @ 22050Hz
 num_classes: 42
-batch_size: 32
-num_workers: 4
+time_frames: 301  # floor(sample_rate * segment_duration / hop_length) + 1
+batch_size: 64
+num_workers: 8
 pin_memory: true
 normalize: true
-
-# Quality-gate thresholds calibrated on 1000 anuraset samples (calibrate_quality_gate.py)
-# SNR: mean=7.6 dB, std=5.4 — threshold at p25 (much wider range than aswine)
-# Flatness: mean=0.0253, std=0.0244 — threshold at p75 (23× higher than aswine, noisier env)
-quality_gate:
-  snr_threshold: 2.8
-  spectral_flatness_threshold: 0.0348
