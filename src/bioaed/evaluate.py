@@ -60,7 +60,7 @@ def main(cfg: DictConfig) -> None:
     all_labels: list[torch.Tensor] = []
 
     with torch.no_grad():
-        for spectrogram, labels, _weights in test_loader:
+        for spectrogram, labels in test_loader:
             logits = model(spectrogram)
             all_logits.append(logits)
             all_labels.append(labels)

@@ -6,7 +6,12 @@ patch_size: 16
 fstride: 16
 tstride: 16
 embed_dim: 192
-depth: 4
+depth: 24
 d_state: 16
-bidirectional: true
+bidirectional: false
 use_cls_token: true
+use_bimamba: true
+use_middle_cls_token: false
+if_divide_out: true
+pretrained_path: checkpoints/ssamba_tiny_400.pth
+pool_type: mean_no_cls

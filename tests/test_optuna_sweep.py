@@ -12,7 +12,6 @@ from omegaconf import OmegaConf
 from bioaed.hpo.optuna_sweep import (
     _compute_pos_weight,
     _suggest_common,
-    _suggest_dcqg,
     _suggest_model_specific,
     run_sweep,
 )
@@ -52,14 +51,6 @@ def _base_cfg_dict() -> dict:
             "scheduler": "cosine",
             "warmup_epochs": 0,
             "compile": False,
-        },
-        "quality_gate": {
-            "enabled": False,
-            "snr_threshold": 0.0,
-            "spectral_flatness_threshold": 0.0,
-            "weighting_strategy": "soft",
-            "alpha": 0.5,
-            "beta": 10.0,
         },
         "augmentation": {
             "enabled": True,
@@ -115,71 +106,74 @@ class TestSuggestCommon:
         _suggest_common(trial, cfg)
         assert cfg["augmentation"]["enabled"] is False
 
-
-class TestSuggestDcqg:
-    def test_enabled(self) -> None:
+    def test_skip_lr_does_not_register_learning_rate(self) -> None:
+        """When skip_lr=True, learning_rate must NOT be suggested by _suggest_common
+        so that _suggest_model_specific can register it with a narrower range."""
         trial = optuna.trial.FixedTrial(
             {
-                "snr_threshold": 5.0,
-                "spectral_flatness_threshold": 0.3,
-                "alpha": 1.0,
-                "beta": 15.0,
+                "weight_decay": 1e-3,
+                "batch_size": 32,
+                "scheduler": "cosine",
+                "warmup_epochs": 2,
+                "gradient_clip_val": 1.0,
+                "use_pos_weight": False,
+                "augmentation_enabled": False,
             }
         )
         cfg = _base_cfg_dict()
-        cfg["quality_gate"]["enabled"] = True
-        _suggest_dcqg(trial, cfg)
-        assert cfg["quality_gate"]["snr_threshold"] == 5.0
-        assert cfg["quality_gate"]["alpha"] == 1.0
-
-    def test_disabled_no_changes(self) -> None:
-        trial = optuna.trial.FixedTrial({})
-        cfg = _base_cfg_dict()
-        cfg["quality_gate"]["enabled"] = False
-        _suggest_dcqg(trial, cfg)
-        assert cfg["quality_gate"]["snr_threshold"] == 0.0  # unchanged
+        original_lr = cfg["training"]["learning_rate"]
+        _suggest_common(trial, cfg, skip_lr=True)
+        # LR must not have been touched by _suggest_common
+        assert cfg["training"]["learning_rate"] == original_lr
+        # Everything else should still be set
+        assert cfg["training"]["weight_decay"] == 1e-3
+        assert cfg["training"]["batch_size"] == 32
 
 
 class TestSuggestModelSpecific:
     def test_inceptiontime(self) -> None:
         trial = optuna.trial.FixedTrial(
             {
-                "depth": 3,
+                "depth": 6,
                 "n_filters": 32,
-                "kernel_sizes": "medium",
+                "kernel_size": 41,
+                "use_bottleneck": True,
+                "bottleneck_size": 32,
             }
         )
         cfg = _base_cfg_dict()
         _suggest_model_specific(trial, cfg, "inceptiontime")
-        assert cfg["model"]["depth"] == 3
+        assert cfg["model"]["depth"] == 6
         assert cfg["model"]["n_filters"] == 32
-        assert cfg["model"]["kernel_sizes"] == [10, 20, 40]
+        assert cfg["model"]["kernel_size"] == 41
+        assert cfg["model"]["use_bottleneck"] is True
 
     def test_ast(self) -> None:
         trial = optuna.trial.FixedTrial(
             {
-                "model_name": "vit_base_patch16_224",
-                "pretrained": False,
+                "model_size": "base384",
                 "learning_rate": 2e-5,
             }
         )
         cfg = _base_cfg_dict()
         _suggest_model_specific(trial, cfg, "ast")
-        assert cfg["model"]["model_name"] == "vit_base_patch16_224"
+        assert cfg["model"]["model_size"] == "base384"
+        assert cfg["model"]["imagenet_pretrain"] is True
+        assert cfg["model"]["audioset_pretrain"] is True
 
     def test_audio_mamba(self) -> None:
         trial = optuna.trial.FixedTrial(
             {
-                "d_model": 128,
-                "n_layers": 4,
+                "embed_dim": 128,
+                "depth": 4,
                 "d_state": 16,
                 "patch_size": 16,
             }
         )
         cfg = _base_cfg_dict()
         _suggest_model_specific(trial, cfg, "audio_mamba")
-        assert cfg["model"]["d_model"] == 128
-        assert cfg["model"]["n_layers"] == 4
+        assert cfg["model"]["embed_dim"] == 128
+        assert cfg["model"]["depth"] == 4
 
     def test_unknown_model_no_error(self) -> None:
         trial = optuna.trial.FixedTrial({})
@@ -219,3 +213,106 @@ class TestRunSweep:
         assert isinstance(study, optuna.Study)
         assert study.best_value == 0.5
         assert len(study.trials) == 2
+
+    def test_persists_to_sqlite(self, tmp_path, monkeypatch) -> None:
+        """Test that run_sweep creates a SQLite study database."""
+        monkeypatch.setattr(
+            "bioaed.hpo.optuna_sweep.objective",
+            lambda trial, cfg: 0.5,
+        )
+        cfg = OmegaConf.create(_base_cfg_dict())
+        study = run_sweep(
+            cfg,
+            n_trials=2,
+            n_startup_trials=1,
+            output_dir=tmp_path,
+            study_name="test_persist",
+        )
+        assert (tmp_path / "study.db").exists()
+        assert (tmp_path / "best_params.json").exists()
+        assert len(study.trials) == 2
+
+    def test_resumes_partial_study(self, tmp_path, monkeypatch) -> None:
+        """Test that run_sweep resumes from an existing SQLite study."""
+        call_count = 0
+
+        def counting_objective(trial, cfg):
+            nonlocal call_count
+            call_count += 1
+            return 0.5
+
+        monkeypatch.setattr(
+            "bioaed.hpo.optuna_sweep.objective",
+            counting_objective,
+        )
+        cfg = OmegaConf.create(_base_cfg_dict())
+
+        # First run: 2 trials
+        run_sweep(
+            cfg,
+            n_trials=5,
+            n_startup_trials=1,
+            output_dir=tmp_path,
+            study_name="test_resume",
+        )
+        # Simulate interruption: only 2 ran because we'll override n_trials
+        # Actually, let's do it properly: run 2, then run 5 total
+        call_count = 0
+        study1 = run_sweep(
+            cfg,
+            n_trials=2,
+            n_startup_trials=1,
+            output_dir=tmp_path / "resume",
+            study_name="test_resume2",
+        )
+        assert len(study1.trials) == 2
+        first_run_calls = call_count
+
+        # Second run: request 5 total — should only run 3 more
+        call_count = 0
+        study2 = run_sweep(
+            cfg,
+            n_trials=5,
+            n_startup_trials=1,
+            output_dir=tmp_path / "resume",
+            study_name="test_resume2",
+        )
+        assert len(study2.trials) == 5
+        assert call_count == 3  # Only 3 new trials executed
+
+    def test_skips_when_all_done(self, tmp_path, monkeypatch) -> None:
+        """Test that run_sweep skips optimization when all trials are done."""
+        call_count = 0
+
+        def counting_objective(trial, cfg):
+            nonlocal call_count
+            call_count += 1
+            return 0.5
+
+        monkeypatch.setattr(
+            "bioaed.hpo.optuna_sweep.objective",
+            counting_objective,
+        )
+        cfg = OmegaConf.create(_base_cfg_dict())
+
+        # Run 3 trials
+        run_sweep(
+            cfg,
+            n_trials=3,
+            n_startup_trials=1,
+            output_dir=tmp_path,
+            study_name="test_skip",
+        )
+        assert call_count == 3
+
+        # Re-run requesting same 3 — should run 0 new trials
+        call_count = 0
+        study = run_sweep(
+            cfg,
+            n_trials=3,
+            n_startup_trials=1,
+            output_dir=tmp_path,
+            study_name="test_skip",
+        )
+        assert call_count == 0
+        assert len(study.trials) == 3

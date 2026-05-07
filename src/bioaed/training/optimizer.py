@@ -44,6 +44,7 @@ def build_optimizer_and_scheduler(
         model.parameters(),
         lr=learning_rate,
         weight_decay=weight_decay,
+        foreach=False,  # avoids _multi_tensor_adam dtype/device mismatch with mamba-ssm
     )
 
     scheduler: LRScheduler | None = None

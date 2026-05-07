@@ -64,11 +64,5 @@ def aswine_cfg() -> OmegaConf:
                 "scheduler": "cosine",
                 "warmup_epochs": 0,
             },
-            "quality_gate": {
-                "enabled": False,
-                "snr_threshold": 0.0,
-                "spectral_flatness_threshold": 0.0,
-                "weighting_strategy": "soft",
-            },
         }
     )

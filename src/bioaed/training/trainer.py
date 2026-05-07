@@ -1,4 +1,4 @@
-"""Lightning Fabric-based trainer with quality-weighted BCE loss."""
+"""Lightning Fabric-based trainer with BCE loss."""
 
 from __future__ import annotations
 
@@ -97,27 +97,25 @@ class FabricTrainer:
             model.train()
             train_loss = 0.0
             num_batches = 0
-            all_weights: list[torch.Tensor] = []
 
-            for batch_idx, (spectrogram, labels, quality_weights) in enumerate(train_loader):
-                all_weights.append(quality_weights.detach().cpu())
-
+            for batch_idx, (spectrogram, labels) in enumerate(train_loader):
                 # Forward pass
                 logits = model(spectrogram)
-                loss_unreduced = criterion(logits, labels)
-
-                # Apply quality-gate weights (per-sample weighting)
-                weighted_loss = loss_unreduced * quality_weights.unsqueeze(-1)
-                loss = weighted_loss.mean()
+                loss = criterion(logits, labels).mean()
 
                 # Gradient accumulation
                 is_accumulating = (batch_idx + 1) % self.cfg.training.accumulate_grad_batches != 0
                 self.fabric.backward(loss)
 
                 if not is_accumulating:
-                    # Gradient clipping
+                    # Gradient clipping — error_if_nonfinite=False lets
+                    # NaN/Inf gradients degrade gracefully (model outputs NaN,
+                    # val_loss=nan) rather than crashing the HPO trial.
                     self.fabric.clip_gradients(
-                        model, optimizer, max_norm=self.cfg.training.gradient_clip_val
+                        model,
+                        optimizer,
+                        max_norm=self.cfg.training.gradient_clip_val,
+                        error_if_nonfinite=False,
                     )
                     optimizer.step()
                     optimizer.zero_grad()
@@ -126,17 +124,6 @@ class FabricTrainer:
                 num_batches += 1
 
             avg_train_loss = train_loss / max(num_batches, 1)
-
-            # Log quality-weight distribution once per epoch (epoch 1 and every 5th)
-            if epoch == 0 or (epoch + 1) % 5 == 0:
-                w = torch.cat(all_weights)
-                logger.info(
-                    f"Epoch {epoch + 1} quality weights — "
-                    f"mean={w.mean():.4f} std={w.std():.4f} "
-                    f"p10={w.quantile(0.10):.4f} p50={w.median():.4f} "
-                    f"p90={w.quantile(0.90):.4f} "
-                    f"low(<0.3)={((w < 0.3).sum() / len(w) * 100):.1f}%"
-                )
 
             # Step scheduler
             if scheduler is not None:
@@ -192,11 +179,9 @@ class FabricTrainer:
         total_loss = 0.0
         num_batches = 0
 
-        for spectrogram, labels, _quality_weights in val_loader:
+        for spectrogram, labels in val_loader:
             logits = model(spectrogram)
-            loss_unreduced = criterion(logits, labels)
-            # Unweighted val loss prevents biased model selection from DCQG
-            total_loss += loss_unreduced.mean().item()
+            total_loss += criterion(logits, labels).mean().item()
             num_batches += 1
 
         return total_loss / max(num_batches, 1)

@@ -1,4 +1,9 @@
 _target_: bioaed.models.ast_model.AudioSpectrogramTransformer
 num_classes: ${dataset.num_classes}
-pretrained: true
-model_name: "vit_base_patch16_224"
+input_fdim: ${dataset.n_mels}
+input_tdim: ${dataset.time_frames}
+fstride: 10
+tstride: 10
+imagenet_pretrain: true
+audioset_pretrain: true
+model_size: base384

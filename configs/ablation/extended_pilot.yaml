@@ -7,13 +7,12 @@
 # Usage:
 #   python -m bioaed.ablation +ablation=extended_pilot --multirun
 #
-# Total runs: 3 models × 2 datasets × 2 DCQG states × 5 seeds = 60
+# Total runs: 3 models × 2 datasets × 5 seeds = 30
 
 defaults:
   - override /dataset: aswine
   - override /model: inceptiontime
   - override /training: default
-  - override /quality_gate: default
   - override /augmentation: default
 
 seed: 42
@@ -26,7 +25,7 @@ training:
   precision: "bf16-mixed"
 
 dataset:
-  num_workers: 4
+  num_workers: 8
   batch_size: 64
 
 hydra:
@@ -35,5 +34,4 @@ hydra:
     params:
       model: inceptiontime,ast,audio_mamba
       dataset: aswine,anuraset
-      quality_gate.enabled: "true,false"
       seed: "0,1,2,3,4"

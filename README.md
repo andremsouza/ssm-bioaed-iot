@@ -1,22 +1,14 @@
 # BioAED — Bioacoustic Audio Event Detection
 
-> **Data-Centric Quality Gating and Linear-Time State Space Models for Weakly-Labeled Bioacoustic Event Detection in IoT Sensor Streams**
+> **State-Space Models vs. Transformers for Bioacoustic Event Detection in IoT Sensor Streams: An Efficiency-Aware Benchmark**
 
 ## Abstract
 
-Continuous acoustic monitoring of livestock and wildlife via IoT sensors produces high-volume, weakly-labeled audio streams where overlapping sound sources, non-stationary noise, and the absence of precise temporal annotations severely limit automated event detection. Prior work on swine barn Audio Event Detection (AED) has shown that (i) 1D-CNNs such as InceptionTime outperform adapted vision models in efficiency, and (ii) traditional algorithmic denoising actively degrades deep learning classifiers, a phenomenon termed Enhancement-Induced Degradation (EID). Two critical gaps remain: convolutional architectures are restricted to local temporal receptive fields, while the Audio Spectrogram Transformer's (AST) quadratic $O(n^2)$ attention complexity renders it impractical for resource-constrained, edge-based stream processing.
-
-This paper addresses both gaps through two contributions:
-
-1. **Data-Centric Quality Gate (DCQG).** Rather than altering raw waveforms, we compute non-destructive acoustic metrics — Signal-to-Noise Ratio (SNR) and Spectral Flatness — per weakly-labeled segment and map them through a shifted-sigmoid function to produce soft confidence weights $w_i \in [0, 1]$ that modulate the per-sample training loss. Clean, tonal samples contribute fully to the gradient update, while noisy, spectrally flat segments are smoothly down-weighted. Because the raw audio is never modified, the spectrogram seen by the model is identical with or without the gate — avoiding the feature distortion and distribution shift that cause EID.
-
-2. **Audio Mamba (AuM).** We evaluate a Bidirectional State Space Model with linear-time $O(n)$ complexity as a sequence architecture capable of global temporal context modeling at a fraction of the Transformer's computational cost, bridging the accuracy–efficiency gap between InceptionTime and the AST.
-
-We benchmark InceptionTime, AST, and AuM — each with and without DCQG — on two bioacoustic corpora spanning distinct ecological domains: the public **aSwine** corpus (7 behavioral classes, 1 s segments, swine barn environment) and the public **AnuraSet** benchmark (42 neotropical anuran species, 3 s segments, passive acoustic monitoring). Models are evaluated on classification efficacy (AUC, mAP) and computational viability (parameter count, MACs, inference throughput), providing a systems-oriented analysis aligned with IoT sensor data management in Precision Livestock Farming.
+Passive acoustic monitoring supports biodiversity and livestock assessment, but accurate detectors remain difficult to deploy on resource-constrained sensors. We present a controlled benchmark of AST (86.9 M parameters), SSAMBA (AudioSet-pretrained Mamba, 6.8 M), and Mamba scratch (1.1 M) on two IoT-relevant bioacoustic datasets (*aSwine*, *AnuraSet*) under model-based HPO and 5-seed evaluation. Mamba scratch achieves 96.8% of AST mAP (0.849 vs. 0.877 on AnuraSet) with 80× fewer parameters and 8.9× higher throughput, while SSAMBA adds +1.4–3.7 pp mAP without single-segment speed gains. Friedman tests (*p* < 10⁻³) and Pareto analysis indicate that Mamba scratch is the efficiency-first choice under our profiled hardware setting, whereas SSAMBA suits accuracy-oriented use when modest extra latency is acceptable.
 
 ---
 
-Research codebase for comparing **InceptionTime** (1D-CNN), **Audio Spectrogram Transformer** (AST), and **Audio Mamba** (SSM) on weakly-labeled bioacoustic datasets, with a novel data-centric quality gating mechanism.
+Research codebase for comparing **Audio Spectrogram Transformer** (AST), **SSAMBA** (self-supervised Mamba pretrained on AudioSet), and **Mamba (scratch)** (compact SSM trained from scratch) on weakly-labeled bioacoustic datasets.
 
 ## Motivation & Contributions
 
@@ -24,76 +16,20 @@ Research codebase for comparing **InceptionTime** (1D-CNN), **Audio Spectrogram 
 
 Deploying Audio Event Detection on continuous IoT sensor streams in agricultural and ecological settings poses a three-fold challenge:
 
-- **Noisy, weakly-labeled data.** Annotations are assigned to entire audio segments without precise onset/offset markers, and recordings are corrupted by overlapping sources and non-stationary environmental noise. Traditional denoising worsens classifiers (EID), yet ignoring data quality leaves models vulnerable to ambiguous supervision.
-- **Architectural trade-offs in sequence modeling.** Convolutional models (InceptionTime) are efficient but capture only local temporal dependencies. Transformer models (AST) capture global context but scale quadratically in time and memory, making real-time edge deployment infeasible.
-- **Limited cross-domain validation.** Prior bioacoustic AED studies are typically validated on a single dataset, leaving generalizability across species, noise profiles, and segment durations undemonstrated.
+- **Accuracy vs. efficiency gap.** AST delivers strong accuracy but its 86.9 M parameters and quadratic $O(n^2)$ self-attention make real-time edge deployment infeasible. Prior work (Souza et al., SBBD 2025) confirmed AST as the strongest single-model baseline on aSwine; the challenge is matching that accuracy at a fraction of the cost.
+- **SSMs as candidate alternatives.** Mamba offers linear-time $O(n)$ selective state spaces that can model global temporal context efficiently. SSAMBA extends Mamba to audio via self-supervised pretraining on AudioSet. Neither has been benchmarked against AST on in-situ IoT bioacoustic datasets under controlled HPO.
+- **Limited cross-domain validation.** Prior bioacoustic AED studies are typically validated on a single dataset, leaving generalisability across species, noise profiles, and segment durations undemonstrated.
+
+### Research Question
+
+> **RQ:** Can SSMs match AST accuracy on bioacoustic AED while enabling IoT-viable deployment through lower parameter count and inference latency?
 
 ### Contributions
 
-This work makes the following contributions:
-
-1. **A non-destructive, data-centric quality gating mechanism (DCQG)** that computes per-sample SNR and Spectral Flatness scores, maps them through shifted-sigmoid functions to soft confidence weights, and uses these weights to modulate the per-sample cross-entropy loss — improving robustness to label noise and low-quality segments without altering the raw audio signal.
-2. **A systematic evaluation of Audio Mamba (AuM)**, a Bidirectional State Space Model with $O(n)$ complexity, as a drop-in alternative to both local-context 1D-CNNs and quadratic-cost Transformers for bioacoustic event classification.
-3. **A multi-domain experimental benchmark** comparing three architecturally distinct model families (InceptionTime, AST, AuM) across two ecologically diverse datasets (aSwine and AnuraSet), assessed on both classification performance (AUC, mAP) and computational efficiency (parameters, MACs, throughput).
-4. **An analysis of the interaction between data-centric quality weighting and model architecture**, quantifying whether DCQG yields consistent gains across convolutional, attention-based, and state-space models.
-
-### Data-Centric Quality Gate (DCQG) — Detailed Mechanism
-
-#### Background: Why Not Just Denoise?
-
-Prior work on the aSwine corpus demonstrated that traditional algorithmic denoising (spectral subtraction, Kalman filtering, SD-ROM) **actively degrades** deep learning classifiers — a phenomenon termed **Enhancement-Induced Degradation (EID)**. Deep models learn to treat continuous background noise as a contextual baseline; imperfect algorithmic filtering corrupts that baseline and introduces structured artifacts (e.g., "musical noise") that disrupt learned representations. Per the Data Processing Inequality, any deterministic post-processing of a noisy signal can only reduce mutual information with the classification target.
-
-DCQG addresses this paradox: **it improves training robustness to noisy, weakly-labeled samples without altering the raw audio waveform**.
-
-#### Mechanism
-
-DCQG operates in three stages:
-
-**1. Per-sample acoustic profiling.** For each raw waveform segment, two non-destructive acoustic metrics are computed *before* any feature extraction:
-
-- **Signal-to-Noise Ratio (SNR).** Estimated via a frame-wise energy heuristic: the waveform is split into short frames (2048 samples), frame energies are sorted, and the ratio of the mean energy in the top-20% frames (signal proxy) to the bottom-20% frames (noise floor proxy) yields an SNR in decibels. *Higher SNR → cleaner, more informative sample.*
-
-- **Spectral Flatness (Wiener entropy).** Computed as the geometric-to-arithmetic mean ratio of the power spectrum, averaged across time frames. Values near 1.0 indicate a noise-like, spectrally uniform signal; values near 0.0 indicate a tonal, structured signal. *Higher flatness → more noise-like, less informative sample.*
-
-**2. Metric-to-weight mapping.** The two scores are converted into a single scalar **confidence weight** $w_i \in [0, 1]$ for sample $i$:
-
-- **Soft weighting** (default): each metric is passed through a shifted sigmoid, then the two factors are multiplied:
-
-$$w_i = \sigma\bigl(\alpha \cdot (\text{SNR}_i - \tau_{\text{SNR}})\bigr) \;\cdot\; \sigma\bigl(\beta \cdot (\tau_{\text{SF}} - \text{SF}_i)\bigr)$$
-
-where $\tau_{\text{SNR}}$ and $\tau_{\text{SF}}$ are configurable thresholds, and $\alpha = 0.5$, $\beta = 10.0$ are sigmoid scaling factors. Samples with high SNR and low spectral flatness receive $w_i \approx 1$; noisy, flat-spectrum samples are smoothly down-weighted toward $0$.
-
-- **Hard gating** (optional): binary — $w_i = 1$ if both thresholds are met, else $w_i = 0$.
-
-**3. Loss modulation at training time.** The standard multi-label loss (`BCEWithLogitsLoss`) is computed per sample with `reduction="none"`, then element-wise scaled by the quality weight before averaging:
-
-$$\mathcal{L} = \frac{1}{N} \sum_{i=1}^{N} w_i \cdot \text{BCE}(\hat{y}_i, y_i)$$
-
-Noisy or ambiguous segments still appear in every mini-batch (the model still *sees* them), but their gradients contribute proportionally less to the parameter update. The model is never starved of data, yet it learns disproportionately from clean, well-structured samples.
-
-#### Key Design Properties
-
-| Property | Description |
-|:---|:---|
-| **Non-destructive** | Raw waveforms are never modified; the spectrogram seen by the model is identical with or without DCQG. Only the loss contribution changes. |
-| **Architecture-agnostic** | The weight is a scalar attached to each sample, independent of model internals. InceptionTime, AST, and Audio Mamba all receive the same per-sample weight. |
-| **Counters EID** | Because no audio transformation occurs, the feature distortion and distribution shift that cause EID are entirely avoided. |
-| **Configurable** | Thresholds (`snr_threshold`, `spectral_flatness_threshold`) and strategy (`soft` / `hard`) are exposed as Hydra config parameters in `configs/quality_gate/default.yaml`. |
-
-#### Pipeline Integration
-
-```
-raw waveform ──▶ QualityGate.compute_confidence_weight() ──▶ w_i (scalar)
-     │                                                            │
-     ▼                                                            ▼
- MelSpectrogram ──▶ log-mel ──▶ Model ──▶ logits ──▶ BCE(logits, y) × w_i ──▶ loss.mean()
-```
-
-In the codebase, this is wired as follows:
-
-- `AudioDataset.__getitem__()` returns `(spectrogram, labels, quality_weight)` per sample.
-- `FabricTrainer.fit()` unpacks the triplet and applies `loss_unreduced * quality_weights.unsqueeze(-1)` before calling `loss.mean()`.
-- The quality gate is instantiated once in `BioacousticDataModule.__init__()` from the Hydra config, and injected into every dataset split.
+1. **A controlled benchmark** of three architectures — AST, SSAMBA, and Mamba (scratch) — on two bioacoustic datasets spanning different ecological domains and class cardinalities (7 and 42 classes).
+2. **Model-based HPO** (Optuna TPE, 30 trials per model×dataset combination, 180 total) followed by 5-seed evaluation, yielding robust mean and variance estimates.
+3. **Pareto-efficiency analysis** across accuracy, inference throughput, and parameter count, providing deployment-ready guidance for IoT practitioners.
+4. **Statistical validation** via Friedman omnibus test and Nemenyi post-hoc tests.
 
 ## Research Blueprint (Mermaid)
 
@@ -101,82 +37,120 @@ In the codebase, this is wired as follows:
 
 ```mermaid
 flowchart LR
-  A[Continuous IoT Audio Streams in PLF] --> B[Weak Labels + Class Imbalance]
-  A --> C[Overlapping Events + Non-Stationary Noise]
-  B --> D[Training Instability and Ambiguous Supervision]
+A[Continuous IoT Audio Streams</br>aSwine + AnuraSet] --> B[Weak Labels + Class Imbalance]
+  A --> C[Resource-Constrained Edge Nodes]
+  B --> D[Need for Accurate + Efficient AED]
   C --> D
-  D --> E[Need for Data-Centric Quality Control]
-  D --> F[Need for Efficient Long-Context Modeling]
-  E --> G[DCQG: SNR + Spectral Flatness to Soft Confidence Weights]
-  F --> H[Audio Mamba: Linear-Time O of n State Space Modeling]
-  G --> I[Robust and Scalable AED Pipeline]
-  H --> I
+  D --> E1[AST: Strong accuracy</br>but O of n-squared, 86.9M params]
+  D --> E2[SSMs: O of n complexity</br>Mamba / SSAMBA]
+  E1 --> F[Gap: Can SSMs match AST</br>at IoT-viable cost?]
+  E2 --> F
 ```
 
-### 2) Research Questions
+### 2) Research Question
 
 ```mermaid
 flowchart TB
-  RQ0[Central Question:<br/>How to improve weakly-labeled bioacoustic AED<br/>without sacrificing computational viability?]
+  RQ[RQ: Can SSMs match AST accuracy on bioacoustic AED<br/>while enabling IoT-viable deployment<br/>through lower parameter count and inference latency?]
 
-  RQ0 --> RQ1[RQ1: Does DCQG improve detection quality<br/>vs. unweighted training on raw audio?]
-  RQ0 --> RQ2[RQ2: Can Audio Mamba match/exceed InceptionTime and AST<br/>on AUC and mAP?]
-  RQ0 --> RQ3[RQ3: Does Audio Mamba provide better efficiency<br/>than AST for stream-oriented deployment?]
-  RQ0 --> RQ4[RQ4: Do results generalize across domains<br/>aSwine and AnuraSet?]
-
-  RQ1 --> M1[Metrics: Delta AUC, Delta mAP]
-  RQ2 --> M2[Metrics: AUC, mAP per dataset]
-  RQ3 --> M3[Metrics: Params, MACs, Throughput]
-  RQ4 --> M4[Cross-dataset consistency analysis]
+  RQ --> M1[Accuracy: mAP, ROC-AUC</br>per dataset × model]
+  RQ --> M2[Efficiency: Params, MACs, Throughput</br>batch=1 inference]
+  RQ --> M3[Pareto analysis:</br>accuracy vs throughput vs params]
+  RQ --> M4[Statistical validation:</br>Friedman + Nemenyi post-hoc]
 ```
 
 ### 3) Premises and Testable Hypotheses
 
 ```mermaid
 flowchart LR
-  P1[Premise 1:<br/>Traditional denoising can induce EID]
-  P2[Premise 2:<br/>Weak labels require robust training signals]
-  P3[Premise 3:<br/>Transformer attention is O of n squared and costly]
-  P4[Premise 4:<br/>State Space Models capture long context in O of n]
+  P1[AST: O of n-squared attention</br>86.9M params, 8.77 GFLOPs]
+  P2[Mamba scratch: O of n SSM</br>1.1M params, lightweight]
+  P3[SSAMBA: AudioSet-pretrained Mamba</br>6.8M params, 0.19 GFLOPs]
 
-  P1 --> H1[H1: Non-destructive quality weighting<br/>outperforms denoising-based preprocessing]
-  P2 --> H2[H2: DCQG reduces effect of ambiguous segments]
-  P3 --> H3[H3: AST has lower throughput / higher cost]
-  P4 --> H4[H4: Audio Mamba improves accuracy-cost trade-off]
-
-  H1 --> O[Expected Outcome:\nBetter quality-performance-efficiency frontier]
+  P1 --> H1[H1: Mamba scratch achieves</br>near-AST mAP at Nx fewer params]
+  P2 --> H1
+  P1 --> H2[H2: SSAMBA pretraining</br>improves over Mamba scratch]
+  P3 --> H2
+  H1 --> O[Pareto-optimal operating point</br>for IoT deployment]
   H2 --> O
-  H3 --> O
-  H4 --> O
 ```
 
 ### 4) Experimental Methodology
 
 ```mermaid
 flowchart TD
-  A[Input Datasets<br/>aSwine + AnuraSet] --> B[Audio Standardization<br/>Resample / segment handling]
-  B --> C[DCQG Computation<br/>SNR + Spectral Flatness]
-  C --> D[Confidence Weights per Sample]
-  B --> E[Log-Mel Feature Extraction\nWindow/Hop/Mel bins]
-  D --> F[Weighted BCEWithLogitsLoss]
+  A[Input Datasets</br>aSwine + AnuraSet] --> B[Audio Standardisation</br>64-band log-mel, 16x16 patches]
 
-  E --> G1[Model A: InceptionTime]
-  E --> G2[Model B: AST]
-  E --> G3[Model C: Audio Mamba]
+  B --> G1[Model A: AST</br>ViT-Base, ImageNet+AudioSet pretrained]
+  B --> G2[Model B: SSAMBA</br>Mamba-tiny, AudioSet self-supervised]
+  B --> G3[Model C: Mamba scratch</br>4-layer, 1.1M params]
 
-  F --> G1
-  F --> G2
-  F --> G3
-
-  G1 --> H[Optuna Tuning + Training]
+  G1 --> H[Optuna TPE HPO</br>30 trials per model x dataset]
   G2 --> H
   G3 --> H
 
-  H --> I[Evaluation: AUC + mAP]
-  H --> J[Profiling: Params + MACs + Throughput]
-  I --> K[Comparative Analysis\nAccuracy vs Efficiency vs Generalization]
-  J --> K
+  H --> I[5-seed evaluation</br>n=30 runs per config]
+  I --> J1[Accuracy: mAP + ROC-AUC]
+  I --> J2[Efficiency: Params + MACs + Throughput]
+  J1 --> K[Pareto + Statistical Analysis</br>Friedman + Nemenyi]
+  J2 --> K
 ```
+
+## Model Architectures
+
+### Mamba (scratch) — 4-layer external bidirectional SSM
+
+```mermaid
+flowchart TD
+  A["Input log-mel spectrogram</br>(B, 1, F, T)"]
+  A --> B["PatchEmbed2D</br>Conv2d 16×16, stride 16×16</br>→ (B, N, 192)"]
+  B --> C["CLS token prepend</br>+ Learnable PosEmbed</br>→ (B, N+1, 192)"]
+  C --> D0["Dropout"]
+
+  subgraph ExtBidir["External Bidirectional (depth=4, pairs of 2)"]
+    D0 --> L1["MambaBlock 0</br>Forward scan</br>Add → LN → Mamba(d_state=16)"]
+    L1 --> L2["MambaBlock 1</br>Backward scan</br>Add → LN → Mamba(d_state=16)"]
+    L2 --> L3["MambaBlock 2</br>Forward scan</br>Add → LN → Mamba(d_state=16)"]
+    L3 --> L4["MambaBlock 3</br>Backward scan</br>Add → LN → Mamba(d_state=16)"]
+  end
+
+  L4 --> E["LayerNorm"]
+  E --> F["CLS token → Linear(192, C)</br>Classification head"]
+  F --> G["Output logits (B, C)"]
+```
+
+> **Mamba scratch** uses *external* bidirectionality: layers alternate forward/backward scan direction in pairs. No pretraining — weights are randomly initialised. 1.1 M parameters.
+
+---
+
+### SSAMBA (pretrained) — 24-layer internal BiMamba
+
+```mermaid
+flowchart TD
+  P["AudioSet pretraining</br>Masked patch prediction</br>(ssamba_tiny_400.pth)"]
+
+  A["Input log-mel spectrogram</br>(B, 1, F, T)"]
+  A --> B["PatchEmbed2D</br>Conv2d 16×16, stride 16×16</br>→ (B, N, 192)"]
+  B --> C["CLS token prepend</br>+ Pretrained PosEmbed (interpolated)</br>→ (B, N+1, 192)"]
+  C --> D0["Dropout"]
+
+  subgraph IntBidir["Internal BiMamba (depth=24, use_bimamba=True)"]
+    D0 --> L1["BiMambaBlock 0</br>Add → LN → BiMambaV2</br>(fwd scan ⊕ bwd scan, if_divide_out=True)"]
+    L1 --> L2["BiMambaBlock 1 … 22</br>×23 more blocks"]
+    L2 --> L3["BiMambaBlock 23"]
+  end
+
+  P -. "load + interpolate pos_embed" .-> C
+
+  L3 --> E["LayerNorm"]
+  E --> F["Mean pooling over patch tokens</br>(pool_type=mean_no_cls)"]
+  F --> G["Linear(192, C)</br>Fine-tuned classification head"]
+  G --> H["Output logits (B, C)"]
+```
+
+> **SSAMBA** uses *internal* bidirectionality: each `BiMambaV2` block runs forward and backward SSM scans in parallel and averages their outputs (`if_divide_out=True`). Weights are loaded from the SSAMBA-tiny AudioSet checkpoint and fine-tuned end-to-end. 6.8 M parameters.
+
+---
 
 ## Quickstart
 
@@ -187,13 +161,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 2. Install dependencies (CPU-only)
 make install
 
-# 3. Install with CUDA support (for Audio Mamba + GPU training)
+# 3. Install with CUDA support (for SSAMBA + GPU training)
 make install-cuda
 
-# 4. Run training
-make train
+# 4. Run HPO sweep (Optuna TPE, 30 trials)
+python -m bioaed.sweep model=audio_mamba_pretrained dataset=aswine
 
-# 5. Run linters
+# 5. Run ablation (5-seed evaluation with best HPO params)
+python -m bioaed.ablation
+
+# 6. Generate reports (stats, figures, LaTeX tables)
+python -m bioaed.evaluation.report_generator
+
+# 7. Run linters
 make lint && make typecheck
 ```
 
@@ -204,19 +184,18 @@ sbbd2026/
 ├── configs/              # Hydra YAML configuration files
 │   ├── config.yaml       # Top-level defaults composition
 │   ├── dataset/          # Dataset configs (aswine, anuraset)
-│   ├── model/            # Model configs (inceptiontime, ast, audio_mamba)
-│   ├── training/         # Training hyperparameters
-│   └── quality_gate/     # DCAI quality gating thresholds
+│   ├── model/            # Model configs (ast, audio_mamba)
+│   └── training/         # Training hyperparameters
 ├── data/                 # Raw datasets (git-ignored)
 │   ├── anuraset/         # AnuraSet (42 species, 3s segments)
 │   └── aswine/           # aSwine (7 classes, 1s segments)
 ├── src/bioaed/           # Source package
 │   ├── data/             # Dataset adapters & datamodule
-│   ├── features/         # Quality gate & audio transforms
-│   ├── models/           # InceptionTime, AST, Audio Mamba
+│   ├── features/         # Audio transforms & feature extraction
+│   ├── models/           # AST, Audio Mamba / SSAMBA
 │   ├── training/         # Lightning Fabric trainer
-│   ├── evaluation/       # Metrics & system profiler
-│   ├── hpo/              # Optuna hyperparameter optimization
+│   ├── evaluation/       # Metrics, profiler, report generator
+│   ├── hpo/              # Optuna TPE hyperparameter optimisation
 │   └── utils/            # Logging, reproducibility, config schemas
 ├── tests/                # Unit & integration tests
 ├── pyproject.toml        # Project config (uv, ruff, mypy, pytest)
@@ -226,16 +205,26 @@ sbbd2026/
 
 ## Datasets
 
-| Dataset    | Domain          | Samples  | Classes | Segment | Sample Rate |
-| :--------- | :-------------- | :------- | :------ | :------ | :---------- |
-| **aSwine** | PLF (Swine)     | ~54,000  | 7       | 1s      | 16 kHz      |
-| **AnuraSet**| Ecoacoustics   | 93,378   | 42      | 3s      | 22,050 Hz   |
+| Dataset      | Domain              | Samples  | Classes | Segment | Sample Rate |
+| :----------- | :------------------ | :------- | :------ | :------ | :---------- |
+| **aSwine**   | PLF (Swine)         | ~54,000  | 7       | 1s      | 16 kHz      |
+| **AnuraSet** | Ecoacoustics        | 93,378   | 42      | 3s      | 22,050 Hz   |
+
+Both datasets were collected by in-situ IoT acoustic sensors deployed in the field, directly representing the target deployment scenario.
 
 ## Models
 
-- **InceptionTime** — 1D-CNN with multi-scale temporal convolutions
-- **Audio Spectrogram Transformer (AST)** — ViT-based, pre-trained on AudioSet
-- **Audio Mamba (AuM)** — Bidirectional State Space Model with linear-time complexity
+| Model | Architecture | Params | GFLOPs | Pretraining |
+| :---- | :----------- | -----: | -----: | :---------- |
+| **AST** | ViT-Base, 16×16 patches | 86.9 M | 8.77 | ImageNet + AudioSet |
+| **SSAMBA** | Mamba-tiny encoder, 24 layers | 6.8 M | 0.19 | AudioSet (masked patch) |
+| **Mamba (scratch)** | 4-layer Mamba encoder | 1.1 M | — | None |
+
+- **AST** — dominant accuracy baseline; prohibitive for edge deployment.
+- **SSAMBA** — self-supervised Mamba pretrained on AudioSet; fine-tuned end-to-end. Intermediate accuracy–efficiency point.
+- **Mamba (scratch)** — compact SSM trained from random initialisation; Pareto-optimal for throughput-constrained IoT nodes.
+
+> **Note:** InceptionTime was evaluated in prior work (Souza et al., SBBD 2025) and is not re-evaluated here.
 
 ## Citation
 

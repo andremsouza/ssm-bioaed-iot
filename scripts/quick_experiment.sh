@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ============================================================================
-# quick_experiment.sh — Fast DCQG hypothesis test
+# quick_experiment.sh — Fast benchmark experiment
 #
-# Runs a reduced ablation comparing DCQG on vs off, then generates
-# statistical analysis and figures.
+# Runs a reduced ablation comparing model architectures across datasets,
+# then generates statistical analysis and figures.
 #
 # Modes (mutually exclusive, first flag wins):
-#   (default)    quick_pilot    — inceptiontime × aswine × 5 seeds  = 10 runs
-#   --extended   extended_pilot — 3 models × 2 datasets × 5 seeds   = 60 runs
-#   --full       full_matrix    — 3 models × 2 datasets × 10 seeds  = 120 runs
+#   (default)    quick_pilot    — inceptiontime × aswine × 5 seeds  = 5 runs
+#   --extended   extended_pilot — 3 models × 2 datasets × 5 seeds   = 30 runs
+#   --full       full_matrix    — 3 models × 2 datasets × 5 seeds   = 30 runs
 #
 # Options:
 #   --skip-ablation   skip training, re-run analysis only
@@ -23,6 +23,9 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+# Always use the project's own venv python
+PYTHON="${PYTHON:-.venv/bin/python}"
 
 # ---------- defaults ----------
 ABLATION_PROFILE="quick_pilot"
@@ -42,12 +45,12 @@ done
 
 # ---------- derive run count from profile ----------
 case "$ABLATION_PROFILE" in
-    quick_pilot)    TOTAL_RUNS=10  ; LABEL="PILOT    (10 runs, 1 model × 1 dataset × 5 seeds)" ;;
-    extended_pilot) TOTAL_RUNS=60  ; LABEL="EXTENDED (60 runs, 3 models × 2 datasets × 5 seeds)" ;;
-    full_matrix)    TOTAL_RUNS=120 ; LABEL="FULL     (120 runs, 3 models × 2 datasets × 10 seeds)" ;;
+    quick_pilot)    TOTAL_RUNS=5   ; LABEL="PILOT    (5 runs, 1 model × 1 dataset × 5 seeds)" ;;
+    extended_pilot) TOTAL_RUNS=30  ; LABEL="EXTENDED (30 runs, 3 models × 2 datasets × 5 seeds)" ;;
+    full_matrix)    TOTAL_RUNS=30  ; LABEL="FULL     (30 runs, 3 models × 2 datasets × 5 seeds)" ;;
 esac
 
-echo "=== Quick DCQG Experiment ==="
+echo "=== Benchmark Experiment ==="
 echo "Working directory: $(pwd)"
 echo "Mode:    ${LABEL}"
 echo "Profile: configs/ablation/${ABLATION_PROFILE}.yaml"
@@ -55,19 +58,34 @@ echo "Profile: configs/ablation/${ABLATION_PROFILE}.yaml"
 [[ "$SKIP_ABLATION" == true ]] && echo "Ablation: SKIPPED (analysis only)"
 echo ""
 
+# ---------- step 0: preflight validation ----------
+if [[ "$SKIP_ABLATION" == false ]]; then
+    echo ">>> Step 0/3: Preflight validation (smoke tests for every model × dataset combo)..."
+    if ! "$PYTHON" -m bioaed.preflight "${ABLATION_PROFILE}"; then
+        echo ""
+        echo "!!! Preflight FAILED — fix the errors above before running the experiment."
+        exit 1
+    fi
+    echo ""
+fi
+
 # ---------- step 1: ablation runs ----------
 if [[ "$SKIP_ABLATION" == false ]]; then
-    echo ">>> Step 1/2: Running ablation (${TOTAL_RUNS} runs)..."
-    python -m bioaed.ablation +ablation="${ABLATION_PROFILE}" --multirun
+    echo ">>> Step 1/3: Running ablation (${TOTAL_RUNS} runs)..."
+    if [[ "$RESUME" == true ]]; then
+        "$PYTHON" -m bioaed.ablation +ablation="${ABLATION_PROFILE}" +resume=true --multirun
+    else
+        "$PYTHON" -m bioaed.ablation +ablation="${ABLATION_PROFILE}" --multirun
+    fi
     echo ""
 else
-    echo ">>> Step 1/2: Ablation skipped."
+    echo ">>> Step 1/3: Ablation skipped."
     echo ""
 fi
 
 # ---------- step 2: analysis & figures ----------
-echo ">>> Step 2/2: Generating analysis & figures..."
-python -m bioaed.evaluation.report_generator
+echo ">>> Step 3/3: Generating analysis & figures..."
+"$PYTHON" -m bioaed.evaluation.report_generator
 
 echo ""
 echo "=== Done! ==="

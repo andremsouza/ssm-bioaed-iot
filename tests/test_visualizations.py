@@ -12,7 +12,6 @@ import pytest
 from bioaed.evaluation.statistical_tests import StatisticalResult, run_statistical_comparison
 from bioaed.evaluation.visualizations import (
     generate_latex_table,
-    plot_ablation_heatmap,
     plot_cd_diagram,
     plot_metric_boxplots,
 )
@@ -22,11 +21,10 @@ from bioaed.evaluation.visualizations import (
 def summary_df() -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "model": ["inceptiontime", "inceptiontime", "ast", "ast"],
-            "dataset": ["aswine", "aswine", "aswine", "aswine"],
-            "dcqg": ["dcqg_on", "dcqg_off", "dcqg_on", "dcqg_off"],
-            "mAP_mean": [0.65, 0.60, 0.70, 0.63],
-            "mAP_std": [0.02, 0.03, 0.01, 0.02],
+            "model": ["inceptiontime", "ast"],
+            "dataset": ["aswine", "aswine"],
+            "mAP_mean": [0.65, 0.70],
+            "mAP_std": [0.02, 0.01],
         }
     )
 
@@ -36,17 +34,15 @@ def raw_df() -> pd.DataFrame:
     rng = np.random.default_rng(42)
     rows = []
     for model in ["inceptiontime", "ast"]:
-        for dcqg in ["dcqg_on", "dcqg_off"]:
-            for seed in range(5):
-                rows.append(
-                    {
-                        "model": model,
-                        "dataset": "aswine",
-                        "dcqg": dcqg,
-                        "seed": seed,
-                        "mAP": float(rng.normal(0.6, 0.02)),
-                    }
-                )
+        for seed in range(5):
+            rows.append(
+                {
+                    "model": model,
+                    "dataset": "aswine",
+                    "seed": seed,
+                    "mAP": float(rng.normal(0.6, 0.02)),
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -74,13 +70,6 @@ class TestPlotCdDiagram:
         out = tmp_path / "cd.pdf"
         plot_cd_diagram(result, output_path=out)
         assert not out.exists()
-
-
-class TestPlotAblationHeatmap:
-    def test_saves_file(self, summary_df: pd.DataFrame, tmp_path: Path) -> None:
-        out = tmp_path / "heatmap.pdf"
-        plot_ablation_heatmap(summary_df, metric="mAP", output_path=out)
-        assert out.exists()
 
 
 class TestPlotMetricBoxplots:

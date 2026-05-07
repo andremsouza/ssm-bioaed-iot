@@ -38,8 +38,7 @@ def _make_loader(
 ) -> DataLoader:
     x = torch.randn(n_samples, n_features, 20)
     y = torch.randint(0, 2, (n_samples, n_classes)).float()
-    w = torch.ones(n_samples)
-    ds = TensorDataset(x, y, w)
+    ds = TensorDataset(x, y)
     return DataLoader(ds, batch_size=batch_size, shuffle=False)
 
 

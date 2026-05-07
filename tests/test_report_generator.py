@@ -16,17 +16,16 @@ def _create_fake_ablation(root: Path, n_seeds: int = 5) -> None:
     rng = np.random.default_rng(42)
     for model in ["inceptiontime", "ast"]:
         for dataset in ["aswine"]:
-            for dcqg in ["dcqg_on", "dcqg_off"]:
-                for seed in range(n_seeds):
-                    d = root / model / dataset / dcqg / f"seed_{seed}"
-                    d.mkdir(parents=True)
-                    result = {
-                        "test_metrics": {
-                            "mAP": float(rng.normal(0.6 if dcqg == "dcqg_on" else 0.5, 0.02)),
-                            "roc_auc_weighted": float(rng.normal(0.7, 0.03)),
-                        }
+            for seed in range(n_seeds):
+                d = root / model / dataset / f"seed_{seed}"
+                d.mkdir(parents=True)
+                result = {
+                    "test_metrics": {
+                        "mAP": float(rng.normal(0.6, 0.02)),
+                        "roc_auc_weighted": float(rng.normal(0.7, 0.03)),
                     }
-                    (d / "results.json").write_text(json.dumps(result))
+                }
+                (d / "results.json").write_text(json.dumps(result))
 
 
 class TestGenerateReport:

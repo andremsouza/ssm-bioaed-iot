@@ -1,9 +1,9 @@
 _target_: bioaed.models.inceptiontime.InceptionTime
 num_classes: ${dataset.num_classes}
 in_channels: ${dataset.n_mels}
-depth: 2
-n_filters: 64
-# Odd kernel sizes give exact symmetric padding (padding = k//2),
-# avoiding the asymmetric-copy overhead of even kernels with padding='same'.
-# [9, 19, 39] are the nearest odd equivalents to the original [10, 20, 40].
-kernel_sizes: [9, 19, 39]
+depth: 6
+n_filters: 32
+kernel_size: 41  # produces branches [40, 20, 10]
+use_bottleneck: true
+bottleneck_size: 32
+use_residual: true

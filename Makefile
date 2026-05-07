@@ -1,4 +1,4 @@
-.PHONY: install install-cuda install-cuda-full lint format typecheck test train evaluate sweep ablation quick-pilot analyze figures clean
+.PHONY: install install-cuda install-cuda-full lint format typecheck test train evaluate sweep hpo ablation benchmark quick-pilot analyze figures clean
 
 # === Environment ===
 install:
@@ -48,16 +48,24 @@ evaluate:
 sweep:
 	uv run python -m bioaed.sweep
 
+hpo:
+	uv run python -m bioaed.sweep \
+		model=inceptiontime,ast,audio_mamba \
+		dataset=aswine,anuraset \
+		n_trials=30 --multirun
+
 # === Ablation & Analysis ===
 quick-pilot:
 	bash scripts/quick_experiment.sh
+
+benchmark:
+	bash scripts/run_benchmark.sh
 
 ablation:
 	uv run python -m bioaed.ablation --multirun \
 		model=inceptiontime,ast,audio_mamba \
 		dataset=aswine,anuraset \
-		quality_gate.enabled=true,false \
-		seed=0,1,2,3,4,5,6,7,8,9
+		seed=0,1,2,3,4
 
 analyze:
 	uv run python -m bioaed.evaluation.report_generator

@@ -1,0 +1,30 @@
+# @package _global_
+#
+# Full benchmark: model architectures × datasets × seeds.
+# Uses HPO-optimized hyperparameters when available.
+#
+# Usage:
+#   python -m bioaed.ablation +ablation=benchmark --multirun
+#
+# With HPO params:
+#   python -m bioaed.ablation +ablation=benchmark \
+#       +hpo_params_dir=outputs/hpo --multirun
+#
+# Total runs: 4 models × 2 datasets × 5 seeds = 40
+
+defaults:
+  - override /dataset: aswine
+  - override /model: inceptiontime
+  - override /training: default
+  - override /augmentation: default
+
+seed: 42
+experiment_name: "benchmark"
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model: inceptiontime,ast,audio_mamba,audio_mamba_pretrained
+      dataset: aswine,anuraset
+      seed: "0,1,2,3,4"

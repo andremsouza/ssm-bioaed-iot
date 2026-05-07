@@ -1,0 +1,37 @@
+# @package _global_
+#
+# Pretrained SSAMBA-tiny benchmark.
+# Uses the AudioSet-pretrained SSAMBA-tiny (24-layer BiMamba v2, 192-dim)
+# to benchmark against AST on both datasets, disentangling architecture
+# from pretrained knowledge.
+#
+# Usage:
+#   python -m bioaed.ablation +ablation=mamba_pretrained_benchmark --multirun
+#
+# Total runs: 1 model × 2 datasets × 5 seeds = 10
+
+defaults:
+  - override /dataset: aswine
+  - override /model: audio_mamba_pretrained
+  - override /training: default
+  - override /augmentation: default
+
+seed: 42
+experiment_name: "pretrained_benchmark"
+output_base: "pretrained_benchmark"
+
+training:
+  max_epochs: 30
+  patience: 7
+  warmup_epochs: 3
+  precision: "bf16-mixed"
+
+dataset:
+  num_workers: 8
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      dataset: aswine,anuraset
+      seed: "0,1,2,3,4"

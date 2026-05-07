@@ -53,3 +53,9 @@ Thumbs.db
 
 # === reports ===
 /reports/
+
+# === checkpoints ===
+/checkpoints/
+
+# === .log files ===
+*.log

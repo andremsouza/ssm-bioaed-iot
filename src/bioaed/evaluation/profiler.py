@@ -30,7 +30,17 @@ def _mamba_ssm_flops_counter(module: nn.Module, input: Any, output: Any) -> None
 
     Estimates MACs from the SSM state expansion:
         MACs ≈ B * L * (D * N + D * N) = 2 * B * L * D * N
-    where D = d_model, N = d_state, L = sequence length, B = batch size.
+
+    Symbols:
+        - B: batch size
+        - L: sequence length (number of time-frequency tokens)
+        - D: d_model (inner state/channel dimension of the SSM)
+        - N: d_state (SSM state dimension controlling memory capacity)
+
+    The 2× factor covers two sequential passes per token:
+        1. Discretisation step (Δ, A, B computation) — projects continuous parameters
+           to discrete recurrence matrices.
+        2. Selective scan recurrence — propagates the hidden state across L tokens.
     """
     if not hasattr(module, "d_model") or not hasattr(module, "d_state"):
         return
@@ -97,6 +107,7 @@ def measure_throughput(
     device: str = "cpu",
     num_iterations: int = 100,
     warmup_iterations: int = 10,
+    batch_size: int = 1,
 ) -> dict[str, float]:
     """Measure inference throughput in samples per second.
 
@@ -106,13 +117,14 @@ def measure_throughput(
         device: Device for inference.
         num_iterations: Number of timed forward passes.
         warmup_iterations: Warmup iterations (not timed).
+        batch_size: Number of samples per forward pass.
 
     Returns:
         Dict with ``throughput_samples_per_sec`` and ``avg_latency_ms``.
     """
     model = model.to(device)
     model.eval()
-    dummy_input = torch.randn(1, *input_shape, device=device)
+    dummy_input = torch.randn(batch_size, *input_shape, device=device)
 
     # Warmup
     with torch.no_grad():
@@ -132,11 +144,51 @@ def measure_throughput(
     elapsed = time.perf_counter() - start
 
     avg_latency_ms = (elapsed / num_iterations) * 1000
-    throughput = num_iterations / elapsed
+    throughput = (num_iterations * batch_size) / elapsed
 
-    logger.info(f"Throughput: {throughput:.1f} samples/sec | Latency: {avg_latency_ms:.2f} ms")
+    logger.info(
+        f"Throughput (batch={batch_size}): {throughput:.1f} samples/sec"
+        f" | Latency: {avg_latency_ms:.2f} ms"
+    )
 
     return {
         "throughput_samples_per_sec": throughput,
         "avg_latency_ms": avg_latency_ms,
     }
+
+
+def measure_peak_memory_mb(
+    model: nn.Module,
+    input_shape: tuple[int, ...],
+    device: str = "cuda",
+    batch_size: int = 1,
+) -> dict[str, float]:
+    """Measure peak GPU memory during a forward pass.
+
+    Args:
+        model: PyTorch model.
+        input_shape: Shape of a single input tensor (excluding batch dim).
+        device: Device for inference (must be ``cuda`` for meaningful results).
+        batch_size: Number of samples per forward pass.
+
+    Returns:
+        Dict with ``peak_memory_mb``.
+    """
+    if not device.startswith("cuda") or not torch.cuda.is_available():
+        logger.warning("Peak memory measurement requires a CUDA device; returning 0.")
+        return {"peak_memory_mb": 0.0}
+
+    model = model.to(device)
+    model.eval()
+    dummy_input = torch.randn(batch_size, *input_shape, device=device)
+
+    torch.cuda.reset_peak_memory_stats(device)
+    with torch.no_grad():
+        model(dummy_input)
+    if device == "cuda":
+        torch.cuda.synchronize()
+
+    peak_bytes = torch.cuda.max_memory_allocated(device)
+    peak_mb = peak_bytes / (1024**2)
+    logger.info(f"Peak GPU memory (batch={batch_size}): {peak_mb:.1f} MB")
+    return {"peak_memory_mb": peak_mb}

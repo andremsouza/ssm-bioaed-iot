@@ -31,39 +31,17 @@ class TestResolveModelKey:
 
 
 class TestBuildOutputDir:
-    def test_dcqg_on_path(self, tmp_path: Path) -> None:
+    def test_path_structure(self, tmp_path: Path) -> None:
         cfg = OmegaConf.create(
             {
                 "dataset": {"name": "aswine"},
-                "quality_gate": {"enabled": True},
                 "seed": 42,
             }
         )
         out = _build_output_dir(cfg, "inceptiontime")
-        assert "dcqg_on" in str(out)
+        assert "inceptiontime" in str(out)
+        assert "aswine" in str(out)
         assert "seed_42" in str(out)
-
-    def test_dcqg_off_path(self) -> None:
-        cfg = OmegaConf.create(
-            {
-                "dataset": {"name": "aswine"},
-                "quality_gate": {"enabled": False},
-                "seed": 0,
-            }
-        )
-        out = _build_output_dir(cfg, "inceptiontime")
-        assert "dcqg_off" in str(out)
-
-    def test_fold_included_in_path(self) -> None:
-        cfg = OmegaConf.create(
-            {
-                "dataset": {"name": "anuraset"},
-                "quality_gate": {"enabled": True},
-                "seed": 1,
-            }
-        )
-        out = _build_output_dir(cfg, "ast", fold=2)
-        assert "fold_2" in str(out)
 
 
 class _TinyDataset(Dataset):
@@ -76,11 +54,10 @@ class _TinyDataset(Dataset):
     def __len__(self) -> int:
         return self.n
 
-    def __getitem__(self, i: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
         spec = torch.randn(64, 100)
         labels = torch.randint(0, 2, (self.num_classes,)).float()
-        weight = torch.tensor(1.0)
-        return spec, labels, weight
+        return spec, labels
 
 
 class TestTrainAndEvaluate:
@@ -110,12 +87,6 @@ class TestTrainAndEvaluate:
                     "scheduler": "cosine",
                     "warmup_epochs": 0,
                     "compile": False,
-                },
-                "quality_gate": {
-                    "enabled": False,
-                    "snr_threshold": 0.0,
-                    "spectral_flatness_threshold": 0.0,
-                    "weighting_strategy": "soft",
                 },
             }
         )
@@ -174,4 +145,3 @@ class TestTrainAndEvaluate:
             result = _train_and_evaluate(minimal_cfg, mock_dm, tmp_path)
 
         assert "val_metrics" in result
-
