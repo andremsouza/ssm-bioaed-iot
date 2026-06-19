@@ -1,0 +1,43 @@
+# Please verify the author name fields below (given/family splitting and the
+# name particles "de") match how each co-author prefers to be cited.
+cff-version: 1.2.0
+title: "BioAED: Efficiency-First Bioacoustic Audio Event Detection Under Resource-Constrained Systems"
+message: "If you use this software, please cite both the software and the accompanying paper (see preferred-citation)."
+type: software
+authors:
+  - given-names: André
+    name-particle: Moreira
+    family-names: Souza
+    orcid: "https://orcid.org/0000-0002-0207-8034"
+    email: andre.moreira.souza@usp.br
+    affiliation: "Institute of Mathematics and Computer Sciences (ICMC), University of São Paulo (USP)"
+repository-code: "https://github.com/andremsouza/ssm-bioaed-iot"
+license: MIT
+keywords:
+  - bioacoustics
+  - audio event detection
+  - state space models
+  - Mamba
+  - edge AI
+  - IoT
+preferred-citation:
+  type: conference-paper
+  title: "Efficiency-First Bioacoustic Audio Event Detection Under Resource-Constrained Systems"
+  authors:
+    - given-names: "André M. S."
+      family-names: Magalhães
+    - given-names: "Willian D."
+      name-particle: de
+      family-names: Oliveira
+    - given-names: "Cesar A. P."
+      family-names: Garbossa
+    - given-names: "Ricardo V."
+      family-names: Ventura
+    - given-names: "Elaine P. M."
+      name-particle: de
+      family-names: Sousa
+  collection-title: "Proceedings of the 41st Brazilian Symposium on Databases (SBBD 2026), Short Papers"
+  publisher:
+    name: "Sociedade Brasileira de Computação (SBC)"
+  year: 2026
+  # TODO: add the DOI once the SBBD 2026 proceedings are published.

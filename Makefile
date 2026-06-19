@@ -1,4 +1,4 @@
-.PHONY: install install-cuda install-cuda-full lint format typecheck test train evaluate sweep hpo ablation benchmark quick-pilot analyze figures clean
+.PHONY: install install-cuda install-cuda-full install-dev install-all download-checkpoints lint format typecheck test test-cov train evaluate sweep hpo ablation benchmark quick-pilot analyze figures reproduce clean
 
 # === Environment ===
 install:
@@ -20,6 +20,21 @@ install-dev:
 install-all:
 	CAUSAL_CONV1D_SKIP_CUDA_BUILD=TRUE MAMBA_SKIP_CUDA_BUILD=TRUE \
 		uv sync --extra cuda-mamba --extra dev
+
+# === Pretrained checkpoints ===
+# SSAMBA tiny (AudioSet self-supervised) from the original release:
+#   https://github.com/SiavashShams/ssamba
+# Provide the checkpoint URL via SSAMBA_CKPT_URL, or place the file manually
+# at checkpoints/ssamba_tiny_400.pth.
+download-checkpoints:
+	mkdir -p checkpoints
+	@if [ -z "$(SSAMBA_CKPT_URL)" ]; then \
+		echo "Set SSAMBA_CKPT_URL to the ssamba_tiny_400.pth URL from"; \
+		echo "https://github.com/SiavashShams/ssamba, or place the file manually"; \
+		echo "at checkpoints/ssamba_tiny_400.pth"; \
+		exit 1; \
+	fi
+	curl -L "$(SSAMBA_CKPT_URL)" -o checkpoints/ssamba_tiny_400.pth
 
 # === Code Quality ===
 lint:
@@ -72,6 +87,10 @@ analyze:
 
 figures:
 	uv run python -m bioaed.evaluation.report_generator
+
+# Full end-to-end reproduction of the paper (GPU-intensive; see the script header).
+reproduce:
+	bash scripts/reproduce_paper.sh
 
 # === Cleanup ===
 clean:
