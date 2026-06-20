@@ -200,7 +200,7 @@ def objective(trial: optuna.Trial, cfg: DictConfig) -> float:
 
     val_loss = best_metrics.get("val_loss", float("inf"))
     # Guard against NaN/Inf val_loss (e.g. exploding gradients at high LR)
-    if not isinstance(val_loss, float) or not (val_loss == val_loss):  # NaN check
+    if not isinstance(val_loss, float) or val_loss != val_loss:  # NaN check
         logger.warning(f"Trial {trial.number}: non-finite val_loss={val_loss}; returning inf")
         return float("inf")
     return val_loss

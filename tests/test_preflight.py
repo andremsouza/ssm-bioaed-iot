@@ -4,11 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
-import torch
-
 from bioaed.preflight import (
-    _load_yaml,
     _parse_sweep_combos,
     _resolve_dataset_config,
     _resolve_model_kwargs,

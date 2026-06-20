@@ -111,10 +111,7 @@ class InceptionModule(nn.Module):
             Output tensor of shape ``(batch, out_channels, time)``.
         """
         # Bottleneck
-        if self.use_bottleneck and self.bottleneck is not None:
-            x_bn = self.bottleneck(x)
-        else:
-            x_bn = x
+        x_bn = self.bottleneck(x) if self.use_bottleneck and self.bottleneck is not None else x
 
         # Multi-scale convolution branches
         outs = [branch(x_bn) for branch in self.branches]
@@ -210,7 +207,7 @@ class InceptionTime(nn.Module):
         """
         residual_input = x
 
-        for d, (block, shortcut) in enumerate(zip(self.blocks, self.shortcuts)):
+        for d, (block, shortcut) in enumerate(zip(self.blocks, self.shortcuts, strict=False)):
             x = block(x)
             if self.use_residual and d % 3 == 2 and shortcut is not None:
                 x = torch.relu(x + shortcut(residual_input))

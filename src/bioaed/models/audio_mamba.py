@@ -179,10 +179,7 @@ class MambaBlock(nn.Module):
         Returns:
             ``(hidden_states, residual)`` to be fed into the next block.
         """
-        if residual is None:
-            residual = hidden_states
-        else:
-            residual = residual + self.drop_path(hidden_states)
+        residual = hidden_states if residual is None else residual + self.drop_path(hidden_states)
         hidden_states = self.norm(residual)
         hidden_states = self.mixer(hidden_states)
         return hidden_states, residual
@@ -547,10 +544,7 @@ class AudioMamba(nn.Module):
                 hidden_states, residual = layer(hidden_states, residual)
 
         # Final prenorm: fold last hidden_states into residual, then norm
-        if residual is None:
-            residual = hidden_states
-        else:
-            residual = residual + hidden_states
+        residual = hidden_states if residual is None else residual + hidden_states
         x = self.norm_f(residual)
 
         # Classification output
@@ -565,9 +559,6 @@ class AudioMamba(nn.Module):
             x = x.mean(dim=1)
         else:
             # pool_type == "cls" (default)
-            if self.use_middle_cls_token:
-                x = x[:, self.num_patches // 2]
-            else:
-                x = x[:, 0]
+            x = x[:, self.num_patches // 2] if self.use_middle_cls_token else x[:, 0]
 
         return self.head(x)

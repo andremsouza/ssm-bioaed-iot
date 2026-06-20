@@ -93,7 +93,7 @@ def aggregate_results(df: pd.DataFrame, metric: str = "mAP") -> pd.DataFrame:
         ci_lo, ci_hi = _bootstrap_ci(vals)
         records.append(
             {
-                **dict(zip(group_cols, keys)),
+                **dict(zip(group_cols, keys, strict=False)),
                 f"{metric}_mean": float(vals.mean()),
                 f"{metric}_std": float(vals.std()),
                 f"{metric}_ci_lower": ci_lo,

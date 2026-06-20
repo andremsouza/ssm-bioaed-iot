@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 import torch
 
-from bioaed.models import MODEL_REGISTRY, _CLASS_NAME_TO_KEY, build_model
+from bioaed.models import _CLASS_NAME_TO_KEY, MODEL_REGISTRY, build_model
 from bioaed.models.inceptiontime import InceptionTime
 
 

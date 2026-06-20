@@ -612,7 +612,7 @@ def generate_benchmark_latex_table(
 ) -> str:
     """Generate a combined LaTeX table with accuracy + efficiency for the 3 models.
 
-    Produces a table with rows per model, columns: Params | GFLOPs | mAP (dataset1) | mAP (dataset2) | ...
+    Produces a table with one row per model and columns for Params, GFLOPs, and per-dataset mAP.
 
     Args:
         summary_df: Aggregated results.

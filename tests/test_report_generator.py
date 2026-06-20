@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
-from unittest.mock import patch
 
 from bioaed.evaluation.report_generator import generate_report
 

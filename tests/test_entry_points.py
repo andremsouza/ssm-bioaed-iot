@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -39,7 +38,9 @@ def _compose_cfg(overrides: list[str] | None = None):
 class TestTrainMainLogic:
     """Cover train.py main() body with mocked data and trainer."""
 
-    def test_main_runs_with_mocked_components(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_main_runs_with_mocked_components(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_path)
         cfg = _compose_cfg()
 
@@ -68,7 +69,9 @@ class TestTrainMainLogic:
 class TestEvaluateMainLogic:
     """Cover evaluate.py main() body with mocked data and model."""
 
-    def test_main_runs_with_mocked_components(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_main_runs_with_mocked_components(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_path)
         cfg = _compose_cfg()
 

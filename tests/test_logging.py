@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from io import StringIO
-from unittest.mock import patch
-
 from bioaed.utils.logging import configure_logging, log_config
 
 
