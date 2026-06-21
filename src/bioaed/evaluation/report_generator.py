@@ -274,12 +274,8 @@ def generate_benchmark_report(
                 higher_is_better_x=False,
             )
 
-    # 6. Combined LaTeX table with profiling
-    all_summary = pd.concat(
-        [aggregate_results(raw_df, metric=m) for m in metrics if m in raw_df.columns],
-        ignore_index=True,
-    )
-    # Deduplicate — keep only unique model/dataset rows with all metric columns
+    # 6. Combined LaTeX table with profiling.
+    # Keep only unique model/dataset rows with all metric columns.
     summary_merged = aggregate_results(raw_df, metric=metrics[0])
     for m in metrics[1:]:
         if m not in raw_df.columns:

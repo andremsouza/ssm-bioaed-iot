@@ -48,7 +48,6 @@ class TestComputeMetrics:
 
     def test_single_class_all_same_label(self) -> None:
         """When one class has all zeros, AUC is undefined (nan)."""
-        import math
 
         labels = torch.tensor([[1, 0], [1, 0]], dtype=torch.float32)
         logits = torch.randn(2, 2)

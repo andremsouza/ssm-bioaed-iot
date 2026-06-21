@@ -1,0 +1,26 @@
+# @package _global_
+#
+# Full matrix: all evaluated models x both datasets x 5 seeds, trained to the
+# default 100-epoch budget (no training override).
+#
+# Usage:
+#   python -m bioaed.ablation +ablation=full_matrix +hpo_params_dir=outputs/hpo --multirun
+#
+# Total runs: 3 models x 2 datasets x 5 seeds = 30
+
+defaults:
+  - override /dataset: aswine
+  - override /model: inceptiontime
+  - override /training: default
+  - override /augmentation: default
+
+seed: 42
+experiment_name: "full_matrix"
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      model: inceptiontime,ast,audio_mamba
+      dataset: aswine,anuraset
+      seed: "0,1,2,3,4"

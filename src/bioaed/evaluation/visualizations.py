@@ -78,9 +78,13 @@ def plot_metric_boxplots(
         output_path = FIGURES_DIR / f"boxplot_{metric}.pdf"
 
     df = raw_df.copy()
+    n_datasets = df["dataset"].nunique()
+    if n_datasets == 0:
+        logger.warning(f"No rows to plot for metric '{metric}'; skipping boxplots.")
+        return
 
     fig, axes = plt.subplots(
-        1, df["dataset"].nunique(), figsize=(7 * df["dataset"].nunique(), 5), squeeze=False
+        1, n_datasets, figsize=(7 * n_datasets, 5), squeeze=False
     )
     for i, (ds_name, ds_group) in enumerate(df.groupby("dataset")):
         ax = axes[0, i]
@@ -612,7 +616,7 @@ def generate_benchmark_latex_table(
 ) -> str:
     """Generate a combined LaTeX table with accuracy + efficiency for the 3 models.
 
-    Produces a table with rows per model, columns: Params | GFLOPs | mAP (dataset1) | mAP (dataset2) | ...
+    Produces a table with one row per model and columns for Params, GFLOPs, and per-dataset mAP.
 
     Args:
         summary_df: Aggregated results.

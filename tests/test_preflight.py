@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-import torch
 
 from bioaed.preflight import (
-    _load_yaml,
     _parse_sweep_combos,
     _resolve_dataset_config,
     _resolve_model_kwargs,
@@ -72,6 +71,9 @@ class TestResolveConfigs:
 class TestCheckDatasetExists:
     """Dataset directory validation."""
 
+    @pytest.mark.skipif(
+        not Path("data/aswine").exists(), reason="aSwine data not available"
+    )
     def test_existing_dataset_no_errors(self) -> None:
         cfg = _resolve_dataset_config("aswine")
         errors = check_dataset_exists("aswine", cfg)

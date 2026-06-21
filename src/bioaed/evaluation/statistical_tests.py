@@ -117,9 +117,8 @@ def run_statistical_comparison(
     # 1. Normality
     result.normality = _shapiro_wilk_per_column(df)
     all_normal = all(p > alpha for p in result.normality.values() if not np.isnan(p))
-    logger.info(
-        f"Normality (Shapiro-Wilk): {'all normal' if all_normal else 'non-normal distributions detected'}"
-    )
+    normality_msg = "all normal" if all_normal else "non-normal distributions detected"
+    logger.info(f"Normality (Shapiro-Wilk): {normality_msg}")
 
     # 2. Omnibus test
     if n_configs == 2:
@@ -166,7 +165,8 @@ def format_results_text(result: StatisticalResult) -> str:
     lines = [
         f"=== Statistical Comparison: {result.metric} ===",
         f"Configurations: {result.n_configs} | Observations: {result.n_observations}",
-        f"Omnibus test: {result.omnibus_test} (stat={result.omnibus_stat:.4f}, p={result.omnibus_pvalue:.6f})",
+        f"Omnibus test: {result.omnibus_test} "
+        f"(stat={result.omnibus_stat:.4f}, p={result.omnibus_pvalue:.6f})",
         f"Significant: {result.significant}",
     ]
 

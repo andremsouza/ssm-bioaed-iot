@@ -5,11 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import torch
 from omegaconf import OmegaConf
 
 from bioaed.data.anuraset import AnuraSetDataset
-from bioaed.data.aswine import ASwineDataset, ASWINE_LABEL_COLUMNS
+from bioaed.data.aswine import ASwineDataset
 from bioaed.data.datamodule import BioacousticDataModule
 
 ASWINE_ROOT = Path("data/aswine")

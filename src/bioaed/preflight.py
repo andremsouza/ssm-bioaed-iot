@@ -204,9 +204,10 @@ def check_real_sample(
     dataset_cfg: dict,
 ) -> list[str]:
     """Load one real sample and pass it through the model."""
+    from omegaconf import OmegaConf
+
     from bioaed.data.datamodule import BioacousticDataModule
     from bioaed.models import build_model
-    from omegaconf import OmegaConf
 
     errors: list[str] = []
     aug_cfg = _load_yaml(CONFIGS_DIR / "augmentation" / "default.yaml")
@@ -276,13 +277,11 @@ def check_hardware(training_cfg: dict) -> list[str]:
     errors: list[str] = []
 
     precision = training_cfg.get("precision", "32-true")
-    if "bf16" in precision:
-        if torch.cuda.is_available():
-            if not torch.cuda.is_bf16_supported():
-                errors.append(
-                    f"Config requires precision={precision} but GPU does not support bf16. "
-                    f"GPU: {torch.cuda.get_device_name(0)}"
-                )
+    if "bf16" in precision and torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        errors.append(
+            f"Config requires precision={precision} but GPU does not support bf16. "
+            f"GPU: {torch.cuda.get_device_name(0)}"
+        )
         # bf16-mixed can work on CPU via autocast, so no error for CPU-only
 
     return errors

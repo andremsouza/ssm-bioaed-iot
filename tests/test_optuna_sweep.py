@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import numpy as np
 import optuna
 import torch
 from omegaconf import OmegaConf
@@ -266,7 +265,6 @@ class TestRunSweep:
             study_name="test_resume2",
         )
         assert len(study1.trials) == 2
-        first_run_calls = call_count
 
         # Second run: request 5 total — should only run 3 more
         call_count = 0

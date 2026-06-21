@@ -48,10 +48,7 @@ def _mamba_ssm_flops_counter(module: nn.Module, input: Any, output: Any) -> None
     d_state = module.d_state
     # Estimate sequence length from input
     inp = input[0] if isinstance(input, tuple) else input
-    if inp.dim() >= 2:
-        seq_len = inp.shape[1] if inp.dim() == 3 else inp.shape[-1]
-    else:
-        seq_len = 1
+    seq_len = (inp.shape[1] if inp.dim() == 3 else inp.shape[-1]) if inp.dim() >= 2 else 1
     batch_size = inp.shape[0]
     # SSM selective scan: ~2 * B * L * D * N (discretize + scan)
     macs = 2 * batch_size * seq_len * d_model * d_state

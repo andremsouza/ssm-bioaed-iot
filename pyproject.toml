@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "bioaed"
 version = "0.1.0"
-description = "Data-Centric Quality Gating and Linear-Time State Space Models for Continuous Bioacoustic Sensor Streams"
+description = "Efficiency-first benchmark of state space models and transformers for bioacoustic audio event detection on resource-constrained IoT devices"
 readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }
-authors = [{ name = "André Moreira Souza" }]
+authors = [{ name = "André Moreira Souza", email = "andre.moreira.souza@usp.br" }]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
@@ -40,6 +40,11 @@ dependencies = [
     "ptflops>=0.7.0",
     "mamba-ssm>=2.3.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/andremsouza/ssm-bioaed-iot"
+Repository = "https://github.com/andremsouza/ssm-bioaed-iot"
+Issues = "https://github.com/andremsouza/ssm-bioaed-iot/issues"
 
 [project.optional-dependencies]
 cuda = [
@@ -75,6 +80,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["ANN"]
+# Model code follows state-space / PyTorch math conventions: single-letter matrix
+# names (A, B, C, D) and `import torch.nn.functional as F`.
+"src/bioaed/models/**/*.py" = ["N803", "N806", "N812"]
 
 [tool.mypy]
 python_version = "3.13"
