@@ -14,7 +14,7 @@ from bioaed.evaluation.report_generator import generate_report
 def _create_fake_ablation(root: Path, n_seeds: int = 5) -> None:
     """Create realistic ablation directory structure with results."""
     rng = np.random.default_rng(42)
-    for model in ["inceptiontime", "ast"]:
+    for model in ["audiospectrogramtransformer", "audiomamba"]:
         for dataset in ["aswine"]:
             for seed in range(n_seeds):
                 d = root / model / dataset / f"seed_{seed}"

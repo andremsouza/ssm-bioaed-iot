@@ -75,11 +75,11 @@ class TestEvaluateMainLogic:
         monkeypatch.chdir(tmp_path)
         cfg = _compose_cfg()
 
-        # Fake batch: (spectrogram, labels, weights)
+        # Fake batch: (spectrogram, labels) -- matches the (spectrogram, labels)
+        # contract used by the trainer and evaluate loops.
         fake_batch = (
             torch.randn(2, cfg.dataset.n_mels, 50),
             torch.zeros(2, cfg.dataset.num_classes),
-            torch.ones(2),
         )
 
         with (
