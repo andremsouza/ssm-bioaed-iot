@@ -248,12 +248,11 @@ bash scripts/download_data.sh all
 
 ## Pretrained checkpoint
 
-SSAMBA is initialised from the SSAMBA-tiny AudioSet checkpoint (`ssamba_tiny_400.pth`), which is not redistributed here. The original SSAMBA authors (Shams et al. 2024, [github.com/SiavashShams/ssamba](https://github.com/SiavashShams/ssamba)) host it on [Google Drive](https://drive.google.com/drive/folders/1E1gf5SxdSByDJ16_WQvzTKn8lIoYtZiX) and [Hugging Face](https://huggingface.co/attentionisallyouneed369/ssamba). Place the file at `checkpoints/ssamba_tiny_400.pth`:
+SSAMBA is initialised from the SSAMBA-tiny AudioSet checkpoint (`ssamba_tiny_400.pth`), released by the original SSAMBA authors (Shams et al. 2024, [github.com/SiavashShams/ssamba](https://github.com/SiavashShams/ssamba)) and mirrored on [Hugging Face](https://huggingface.co/attentionisallyouneed369/ssamba). Fetch it into `checkpoints/`:
 
 ```bash
-# Download ssamba_tiny_400.pth from the links above into checkpoints/, or, if you
-# have a direct file URL, let the Makefile fetch it:
-SSAMBA_CKPT_URL=<direct-file-url> make download-checkpoints
+make download-checkpoints   # downloads ssamba_tiny_400.pth from Hugging Face
+# override the source with: SSAMBA_CKPT_URL=<direct-file-url> make download-checkpoints
 ```
 
 AST and MambaSpec need no external checkpoint (AST pulls its ImageNet and AudioSet weights through `timm`; MambaSpec trains from scratch).

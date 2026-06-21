@@ -22,21 +22,12 @@ install-all:
 		uv sync --extra cuda-mamba --extra dev
 
 # === Pretrained checkpoints ===
-# SSAMBA tiny (AudioSet self-supervised) from the original release:
-#   https://github.com/SiavashShams/ssamba
-# Provide the checkpoint URL via SSAMBA_CKPT_URL, or place the file manually
-# at checkpoints/ssamba_tiny_400.pth.
+# SSAMBA-tiny AudioSet checkpoint (Shams et al., https://github.com/SiavashShams/ssamba),
+# mirrored on Hugging Face. Override SSAMBA_CKPT_URL to use a different source.
+SSAMBA_CKPT_URL ?= https://huggingface.co/attentionisallyouneed369/ssamba/resolve/main/ssamba_tiny_400.pth
+
 download-checkpoints:
 	mkdir -p checkpoints
-	@if [ -z "$(SSAMBA_CKPT_URL)" ]; then \
-		echo "The SSAMBA-tiny checkpoint (ssamba_tiny_400.pth) is hosted by the original"; \
-		echo "SSAMBA authors (https://github.com/SiavashShams/ssamba):"; \
-		echo "  Google Drive: https://drive.google.com/drive/folders/1E1gf5SxdSByDJ16_WQvzTKn8lIoYtZiX"; \
-		echo "  Hugging Face: https://huggingface.co/attentionisallyouneed369/ssamba"; \
-		echo "Download ssamba_tiny_400.pth into checkpoints/, or set SSAMBA_CKPT_URL to a"; \
-		echo "direct file URL and re-run."; \
-		exit 1; \
-	fi
 	curl -fL --retry 3 --retry-all-errors "$(SSAMBA_CKPT_URL)" -o checkpoints/ssamba_tiny_400.pth
 
 # === Code Quality ===
