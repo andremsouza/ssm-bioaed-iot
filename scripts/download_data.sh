@@ -26,7 +26,7 @@ anuraset() {
   echo "==> AnuraSet -> ${DATA_DIR}/anuraset"
   mkdir -p "${DATA_DIR}/anuraset"
   : "${ANURASET_URL:?Set ANURASET_URL to the official AnuraSet archive (see https://github.com/soundclim/anuraset)}"
-  curl -L "${ANURASET_URL}" -o "${DATA_DIR}/anuraset/anuraset_archive"
+  curl -fL --retry 3 --retry-all-errors "${ANURASET_URL}" -o "${DATA_DIR}/anuraset/anuraset_archive"
   # Expected after extraction: ${DATA_DIR}/anuraset/{audio/<site>/*.wav, metadata.csv}
   unzip -n "${DATA_DIR}/anuraset/anuraset_archive" -d "${DATA_DIR}/anuraset" || \
     tar -xf "${DATA_DIR}/anuraset/anuraset_archive" -C "${DATA_DIR}/anuraset"
@@ -36,7 +36,7 @@ aswine() {
   echo "==> aSwine -> ${DATA_DIR}/aswine"
   mkdir -p "${DATA_DIR}/aswine"
   : "${ASWINE_URL:?Set ASWINE_URL to the aSwine dataset archive (see https://github.com/andremsouza/aswine)}"
-  curl -L "${ASWINE_URL}" -o "${DATA_DIR}/aswine/aswine_archive"
+  curl -fL --retry 3 --retry-all-errors "${ASWINE_URL}" -o "${DATA_DIR}/aswine/aswine_archive"
   # Expected after extraction: ${DATA_DIR}/aswine/{audio/*.wav, meta/1s_pruned/*.csv}
   unzip -n "${DATA_DIR}/aswine/aswine_archive" -d "${DATA_DIR}/aswine" || \
     tar -xf "${DATA_DIR}/aswine/aswine_archive" -C "${DATA_DIR}/aswine"
@@ -49,8 +49,8 @@ main() {
     all) anuraset; aswine ;;
     *) echo "usage: $0 [all|anuraset|aswine]" >&2; exit 1 ;;
   esac
-  echo "==> Validating dataset layout with bioaed.preflight"
-  python -m bioaed.preflight
+  echo "==> Validating dataset layout with bioaed.preflight (profile: ${PREFLIGHT_PROFILE:-extended_pilot})"
+  python -m bioaed.preflight "${PREFLIGHT_PROFILE:-extended_pilot}"
   echo "==> Done."
 }
 

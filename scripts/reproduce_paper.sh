@@ -33,12 +33,12 @@ if [ "${SKIP_HPO:-0}" = "1" ]; then
 else
   echo "==> [4/6] HPO (Optuna TPE, ${N_TRIALS} trials per model x dataset)"
   uv run python -m bioaed.sweep --multirun \
-    model="${MODELS}" dataset="${DATASETS}" n_trials="${N_TRIALS}"
+    model="${MODELS}" dataset="${DATASETS}" +n_trials="${N_TRIALS}"
 fi
 
 echo "==> [5/6] 5-seed ablation"
 uv run python -m bioaed.ablation --multirun \
-  model="${MODELS}" dataset="${DATASETS}" seed="${SEEDS}" hpo_params_dir=outputs/hpo
+  model="${MODELS}" dataset="${DATASETS}" seed="${SEEDS}" +hpo_params_dir=outputs/hpo
 
 echo "==> [5b/6] Efficiency profiling (Table 2)"
 uv run python scripts/run_profiling.py

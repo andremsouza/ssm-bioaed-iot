@@ -228,7 +228,7 @@ A helper script downloads and arranges both (supply the archive URLs from the so
 
 ```bash
 ANURASET_URL=<url> ASWINE_URL=<url> bash scripts/download_data.sh all
-python -m bioaed.preflight
+python -m bioaed.preflight extended_pilot
 ```
 
 ## Models
@@ -270,12 +270,12 @@ SSAMBA_CKPT_URL=<url> make download-checkpoints
 
 # 1. HPO (Optuna TPE, 30 trials per model x dataset) -> outputs/hpo/*/best_params.json
 python -m bioaed.sweep --multirun \
-  model=ast,audio_mamba,audio_mamba_pretrained dataset=aswine,anuraset n_trials=30
+  model=ast,audio_mamba,audio_mamba_pretrained dataset=aswine,anuraset +n_trials=30
 
 # 2. 5-seed evaluation -> outputs/ablation/*/seed_*/results.json
 python -m bioaed.ablation --multirun \
   model=ast,audio_mamba,audio_mamba_pretrained dataset=aswine,anuraset \
-  seed=0,1,2,3,4 hpo_params_dir=outputs/hpo
+  seed=0,1,2,3,4 +hpo_params_dir=outputs/hpo
 
 # 3. Efficiency profiling -> reports/profiling_results_extended.json
 python scripts/run_profiling.py

@@ -34,7 +34,7 @@ download-checkpoints:
 		echo "at checkpoints/ssamba_tiny_400.pth"; \
 		exit 1; \
 	fi
-	curl -L "$(SSAMBA_CKPT_URL)" -o checkpoints/ssamba_tiny_400.pth
+	curl -fL --retry 3 --retry-all-errors "$(SSAMBA_CKPT_URL)" -o checkpoints/ssamba_tiny_400.pth
 
 # === Code Quality ===
 lint:
