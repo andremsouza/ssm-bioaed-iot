@@ -1,13 +1,10 @@
-# Please verify the author name fields below (given/family splitting and the
-# name particles "de") match how each co-author prefers to be cited.
 cff-version: 1.2.0
 title: "BioAED: Efficiency-First Bioacoustic Audio Event Detection Under Resource-Constrained Systems"
 message: "If you use this software, please cite both the software and the accompanying paper (see preferred-citation)."
 type: software
 authors:
-  - given-names: André
-    name-particle: Moreira
-    family-names: Souza
+  - given-names: "André M. S."
+    family-names: Magalhães
     orcid: "https://orcid.org/0000-0002-0207-8034"
     email: andre.moreira.souza@usp.br
     affiliation: "Institute of Mathematics and Computer Sciences (ICMC), University of São Paulo (USP)"

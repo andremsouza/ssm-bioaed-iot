@@ -29,9 +29,12 @@ install-all:
 download-checkpoints:
 	mkdir -p checkpoints
 	@if [ -z "$(SSAMBA_CKPT_URL)" ]; then \
-		echo "Set SSAMBA_CKPT_URL to the ssamba_tiny_400.pth URL from"; \
-		echo "https://github.com/SiavashShams/ssamba, or place the file manually"; \
-		echo "at checkpoints/ssamba_tiny_400.pth"; \
+		echo "The SSAMBA-tiny checkpoint (ssamba_tiny_400.pth) is hosted by the original"; \
+		echo "SSAMBA authors (https://github.com/SiavashShams/ssamba):"; \
+		echo "  Google Drive: https://drive.google.com/drive/folders/1E1gf5SxdSByDJ16_WQvzTKn8lIoYtZiX"; \
+		echo "  Hugging Face: https://huggingface.co/attentionisallyouneed369/ssamba"; \
+		echo "Download ssamba_tiny_400.pth into checkpoints/, or set SSAMBA_CKPT_URL to a"; \
+		echo "direct file URL and re-run."; \
 		exit 1; \
 	fi
 	curl -fL --retry 3 --retry-all-errors "$(SSAMBA_CKPT_URL)" -o checkpoints/ssamba_tiny_400.pth

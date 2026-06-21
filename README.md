@@ -221,14 +221,13 @@ Both datasets were collected by in-situ IoT acoustic sensors deployed in the fie
 
 The datasets are not redistributed here. Download them from their official sources and place them under `data/` (override the location with the `DATA_DIR` environment variable):
 
-- **AnuraSet** (Cañas et al. 2023, *Scientific Data*, [doi:10.1038/s41597-023-02666-2](https://doi.org/10.1038/s41597-023-02666-2)). Code and download instructions: [github.com/soundclim/anuraset](https://github.com/soundclim/anuraset). Expected layout: `data/anuraset/{audio/<site>/*.wav, metadata.csv}`.
-- **aSwine** (Souza et al. 2025, *Applied Intelligence*, [doi:10.1007/s10489-025-06555-6](https://doi.org/10.1007/s10489-025-06555-6)). Dataset: [github.com/andremsouza/aswine](https://github.com/andremsouza/aswine). Expected layout: `data/aswine/{audio/*.wav, meta/1s_pruned/*.csv}`.
+- **AnuraSet** (Cañas et al. 2023, *Scientific Data*, [doi:10.1038/s41597-023-02666-2](https://doi.org/10.1038/s41597-023-02666-2)). Download: [Zenodo record 8342596](https://zenodo.org/record/8342596) (`anuraset.zip`, ~10.5 GB); code and preprocessing: [github.com/soundclim/anuraset](https://github.com/soundclim/anuraset). Expected layout: `data/anuraset/{audio/<site>/*.wav, metadata.csv}`.
+- **aSwine** (Souza et al. 2025, *Applied Intelligence*, [doi:10.1007/s10489-025-06555-6](https://doi.org/10.1007/s10489-025-06555-6)). Download: [github.com/andremsouza/aswine](https://github.com/andremsouza/aswine) (the repository archive is the dataset). Expected layout: `data/aswine/{audio/*.wav, meta/1s_pruned/*.csv}`.
 
-A helper script downloads and arranges both (supply the archive URLs from the sources above), then validates the layout:
+A helper script downloads both from these official sources and validates the layout (override `ANURASET_URL` / `ASWINE_URL` to use a mirror):
 
 ```bash
-ANURASET_URL=<url> ASWINE_URL=<url> bash scripts/download_data.sh all
-python -m bioaed.preflight extended_pilot
+bash scripts/download_data.sh all
 ```
 
 ## Models
@@ -249,11 +248,12 @@ python -m bioaed.preflight extended_pilot
 
 ## Pretrained checkpoint
 
-SSAMBA is initialised from the SSAMBA-tiny AudioSet checkpoint (`ssamba_tiny_400.pth`), which is not redistributed here. Obtain it from the original SSAMBA release (Shams et al. 2024, [github.com/SiavashShams/ssamba](https://github.com/SiavashShams/ssamba)) and place it at `checkpoints/ssamba_tiny_400.pth`:
+SSAMBA is initialised from the SSAMBA-tiny AudioSet checkpoint (`ssamba_tiny_400.pth`), which is not redistributed here. The original SSAMBA authors (Shams et al. 2024, [github.com/SiavashShams/ssamba](https://github.com/SiavashShams/ssamba)) host it on [Google Drive](https://drive.google.com/drive/folders/1E1gf5SxdSByDJ16_WQvzTKn8lIoYtZiX) and [Hugging Face](https://huggingface.co/attentionisallyouneed369/ssamba). Place the file at `checkpoints/ssamba_tiny_400.pth`:
 
 ```bash
-SSAMBA_CKPT_URL=<url> make download-checkpoints
-# or download the file manually into checkpoints/ssamba_tiny_400.pth
+# Download ssamba_tiny_400.pth from the links above into checkpoints/, or, if you
+# have a direct file URL, let the Makefile fetch it:
+SSAMBA_CKPT_URL=<direct-file-url> make download-checkpoints
 ```
 
 AST and MambaSpec need no external checkpoint (AST pulls its ImageNet and AudioSet weights through `timm`; MambaSpec trains from scratch).
@@ -265,8 +265,8 @@ Results were produced on a single NVIDIA RTX 5070 Ti with 5 seeds per configurat
 ```bash
 # 0. Environment, data, and pretrained checkpoint
 make install-cuda-full
-ANURASET_URL=<url> ASWINE_URL=<url> bash scripts/download_data.sh all
-SSAMBA_CKPT_URL=<url> make download-checkpoints
+bash scripts/download_data.sh all   # AnuraSet (Zenodo) + aSwine (GitHub)
+make download-checkpoints           # SSAMBA weights; see "Pretrained checkpoint"
 
 # 1. HPO (Optuna TPE, 30 trials per model x dataset) -> outputs/hpo/*/best_params.json
 python -m bioaed.sweep --multirun \
