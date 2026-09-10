@@ -306,7 +306,7 @@ If you use this code, please cite the paper:
   booktitle = {Proc.\ 41st Brazilian Symposium on Databases (SBBD), Short Papers},
   publisher = {SBC},
   year      = {2026},
-  note      = {DOI to be added once the proceedings are published},
+  doi       = {10.5753/sbbd.2026.249645},
 }
 ```
 
