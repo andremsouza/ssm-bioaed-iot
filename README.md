@@ -298,15 +298,18 @@ If you use this code, please cite the paper:
 
 ```bibtex
 @inproceedings{magalhaes2026efficiency,
-  title     = {Efficiency-First Bioacoustic Audio Event Detection Under
-               Resource-Constrained Systems},
-  author    = {Magalh{\~a}es, Andr{\'e} M. S. and de Oliveira, Willian D. and
-               Garbossa, Cesar A. P. and Ventura, Ricardo V. and
-               de Sousa, Elaine P. M.},
-  booktitle = {Proc.\ 41st Brazilian Symposium on Databases (SBBD), Short Papers},
-  publisher = {SBC},
-  year      = {2026},
-  doi       = {10.5753/sbbd.2026.249645},
+ author = {André Magalhães and Willian D. de Oliveira and Cesar A. Garbossa and Ricardo Ventura and Elaine Sousa},
+ title = {Efficiency-First Bioacoustic Audio Event Detection Under Resource-Constrained Systems},
+ booktitle = {Anais do XLI Simpósio Brasileiro de Bancos de Dados},
+ location = {São Carlos/SP},
+ year = {2026},
+ keywords = {},
+ issn = {2763-8979},
+ pages = {980--986},
+ publisher = {SBC},
+ address = {Porto Alegre, RS, Brasil},
+ doi = {10.5753/sbbd.2026.249645},
+ url = {https://sol.sbc.org.br/index.php/sbbd/article/view/44044}
 }
 ```
 
